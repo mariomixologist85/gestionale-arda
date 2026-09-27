@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
-import { FaHome, FaCalendarAlt, FaUsers, FaClipboardList, FaConciergeBell, FaSignOutAlt, FaWhatsapp } from 'react-icons/fa'
+import { FaHome, FaCalendarAlt, FaUsers, FaClipboardList, FaConciergeBell, FaSignOutAlt, FaWhatsapp, FaBars, FaTimes } from 'react-icons/fa'
 import { Button } from 'react-bootstrap'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
@@ -12,6 +12,7 @@ import WhatsApp from './components/WhatsApp'
 
 function App() {
   const [utente, setUtente] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -32,13 +33,32 @@ function App() {
     navigate('/')
   }
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen)
+  }
+
+  const closeSidebar = () => {
+    setSidebarOpen(false)
+  }
+
   if (!utente) {
     return <Login onLogin={handleLogin} />
   }
 
   return (
     <div className="app-container">
-      <aside className="sidebar">
+      {/* Menu toggle per mobile */}
+      <button className="menu-toggle" onClick={toggleSidebar}>
+        {sidebarOpen ? <FaTimes /> : <FaBars />}
+      </button>
+
+      {/* Overlay per mobile */}
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? 'show' : ''}`}
+        onClick={closeSidebar}
+      />
+
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
             <img
@@ -67,32 +87,32 @@ function App() {
         </div>
         <ul className="nav-menu">
           <li className="nav-item">
-            <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
               <FaHome /> Dashboard
             </NavLink>
           </li>
           <li className="nav-item">
-            <NavLink to="/appuntamenti" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/appuntamenti" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
               <FaCalendarAlt /> Appuntamenti
             </NavLink>
           </li>
           <li className="nav-item">
-            <NavLink to="/clienti" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/clienti" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
               <FaUsers /> Clienti
             </NavLink>
           </li>
           <li className="nav-item">
-            <NavLink to="/servizi" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/servizi" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
               <FaConciergeBell /> Servizi
             </NavLink>
           </li>
           <li className="nav-item">
-            <NavLink to="/trattamenti" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/trattamenti" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
               <FaClipboardList /> Storico Trattamenti
             </NavLink>
           </li>
           <li className="nav-item">
-            <NavLink to="/whatsapp" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/whatsapp" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
               <FaWhatsapp /> WhatsApp
             </NavLink>
           </li>

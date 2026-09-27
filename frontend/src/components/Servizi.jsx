@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Modal, Button, Form, Alert } from 'react-bootstrap'
 import { FaPlus, FaEdit, FaTrash, FaConciergeBell } from 'react-icons/fa'
+import { API_BASE_URL } from '../config.js'
 
 function Servizi({ utente }) {
   const [servizi, setServizi] = useState([])
@@ -25,7 +26,7 @@ function Servizi({ utente }) {
 
   const loadServizi = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/servizi')
+      const res = await axios.get(`${API_BASE_URL}/api/servizi`)
       setServizi(res.data)
     } catch (err) {
       console.error('Errore caricamento servizi:', err)
@@ -62,9 +63,9 @@ function Servizi({ utente }) {
     e.preventDefault()
     try {
       if (editingServizio) {
-        await axios.put(`http://localhost:3001/api/servizi/${editingServizio.id}`, formData)
+        await axios.put(`${API_BASE_URL}/api/servizi/${editingServizio.id}`, formData)
       } else {
-        await axios.post('http://localhost:3001/api/servizi', formData)
+        await axios.post(`${API_BASE_URL}/api/servizi`, formData)
       }
       handleCloseModal()
       loadServizi()
@@ -76,7 +77,7 @@ function Servizi({ utente }) {
   const handleDelete = async (id) => {
     if (window.confirm('Sei sicuro di voler eliminare questo servizio?')) {
       try {
-        await axios.delete(`http://localhost:3001/api/servizi/${id}`)
+        await axios.delete(`${API_BASE_URL}/api/servizi/${id}`)
         loadServizi()
       } catch (err) {
         console.error('Errore eliminazione servizio:', err)
@@ -104,7 +105,7 @@ function Servizi({ utente }) {
     e.preventDefault()
     setMasterError('')
     try {
-      const res = await axios.post('http://localhost:3001/api/verifica-master', {
+      const res = await axios.post(`${API_BASE_URL}/api/verifica-master`, {
         password: masterPassword
       })
       if (res.data.valido) {

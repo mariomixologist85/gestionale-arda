@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { FaUsers, FaCalendarCheck, FaConciergeBell, FaClipboardList } from 'react-icons/fa'
+import { API_BASE_URL } from '../config.js'
 
 function Dashboard() {
   const [stats, setStats] = useState({
@@ -18,7 +19,7 @@ function Dashboard() {
 
   const loadStats = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/dashboard/stats')
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/stats`)
       setStats(res.data)
     } catch (err) {
       console.error('Errore caricamento stats:', err)
@@ -28,7 +29,7 @@ function Dashboard() {
   const loadAppuntamentiOggi = async () => {
     try {
       const oggi = new Date().toISOString().split('T')[0]
-      const res = await axios.get(`http://localhost:3001/api/appuntamenti?data=${oggi}`)
+      const res = await axios.get(`${API_BASE_URL}/api/appuntamenti?data=${oggi}`)
       setAppuntamentiOggi(res.data)
     } catch (err) {
       console.error('Errore caricamento appuntamenti:', err)
@@ -49,7 +50,7 @@ function Dashboard() {
           </div>
           <div className="stat-info">
             <h3>{stats.totClienti}</h3>
-            <span>Clienti totali</span>
+            <p>Clienti totali</p>
           </div>
         </div>
 
@@ -59,7 +60,7 @@ function Dashboard() {
           </div>
           <div className="stat-info">
             <h3>{stats.appuntamentiOggi}</h3>
-            <span>Appuntamenti oggi</span>
+            <p>Appuntamenti oggi</p>
           </div>
         </div>
 
@@ -69,7 +70,7 @@ function Dashboard() {
           </div>
           <div className="stat-info">
             <h3>{stats.totServizi}</h3>
-            <span>Servizi disponibili</span>
+            <p>Servizi disponibili</p>
           </div>
         </div>
 
@@ -79,7 +80,7 @@ function Dashboard() {
           </div>
           <div className="stat-info">
             <h3>{stats.totTrattamenti}</h3>
-            <span>Trattamenti effettuati</span>
+            <p>Trattamenti effettuati</p>
           </div>
         </div>
       </div>

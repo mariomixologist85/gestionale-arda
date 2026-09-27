@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Modal, Button, Form } from 'react-bootstrap'
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt } from 'react-icons/fa'
+import { API_BASE_URL } from '../config.js'
 
 function Appuntamenti({ utente }) {
   const [appuntamenti, setAppuntamenti] = useState([])
@@ -34,7 +35,7 @@ function Appuntamenti({ utente }) {
 
   const loadAppuntamenti = async () => {
     try {
-      const res = await axios.get(`http://localhost:3001/api/appuntamenti?data=${filterData}`)
+      const res = await axios.get(`${API_BASE_URL}/api/appuntamenti?data=${filterData}`)
       setAppuntamenti(res.data)
     } catch (err) {
       console.error('Errore caricamento appuntamenti:', err)
@@ -43,7 +44,7 @@ function Appuntamenti({ utente }) {
 
   const loadClienti = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/clienti')
+      const res = await axios.get(`${API_BASE_URL}/api/clienti`)
       setClienti(res.data)
     } catch (err) {
       console.error('Errore caricamento clienti:', err)
@@ -52,7 +53,7 @@ function Appuntamenti({ utente }) {
 
   const loadServizi = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/servizi')
+      const res = await axios.get(`${API_BASE_URL}/api/servizi`)
       setServizi(res.data)
     } catch (err) {
       console.error('Errore caricamento servizi:', err)
@@ -61,7 +62,7 @@ function Appuntamenti({ utente }) {
 
   const loadOperatori = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/operatori')
+      const res = await axios.get(`${API_BASE_URL}/api/operatori`)
       setOperatori(res.data)
     } catch (err) {
       console.error('Errore caricamento operatori:', err)
@@ -138,9 +139,9 @@ function Appuntamenti({ utente }) {
     e.preventDefault()
     try {
       if (editingApp) {
-        await axios.put(`http://localhost:3001/api/appuntamenti/${editingApp.id}`, formData)
+        await axios.put(`${API_BASE_URL}/api/appuntamenti/${editingApp.id}`, formData)
       } else {
-        await axios.post('http://localhost:3001/api/appuntamenti', formData)
+        await axios.post(`${API_BASE_URL}/api/appuntamenti`, formData)
       }
       handleCloseModal()
       loadAppuntamenti()
@@ -157,7 +158,7 @@ function Appuntamenti({ utente }) {
   const handleDelete = async (id) => {
     if (window.confirm('Sei sicuro di voler eliminare questo appuntamento?')) {
       try {
-        await axios.delete(`http://localhost:3001/api/appuntamenti/${id}`)
+        await axios.delete(`${API_BASE_URL}/api/appuntamenti/${id}`)
         loadAppuntamenti()
       } catch (err) {
         console.error('Errore eliminazione appuntamento:', err)
@@ -167,17 +168,17 @@ function Appuntamenti({ utente }) {
 
   const handleInviaPromemoria = async (id) => {
     try {
-      const res = await axios.get(`http://localhost:3001/api/whatsapp/promemoria/${id}`)
-      
+      const res = await axios.get(`${API_BASE_URL}/api/whatsapp/promemoria/${id}`)
+
       // Apri WhatsApp con il link generato
       window.open(res.data.link, '_blank')
-      
+
       // Aggiorna stato promemoria inviato
-      await axios.put(`http://localhost:3001/api/appuntamenti/${id}`, {
+      await axios.put(`${API_BASE_URL}/api/appuntamenti/${id}`, {
         promemoriaInviato: true,
         dataPromemoria: new Date().toISOString()
       })
-      
+
       loadAppuntamenti()
     } catch (err) {
       alert('❌ Errore: ' + (err.response?.data?.error || 'Impossibile generare il link WhatsApp'))

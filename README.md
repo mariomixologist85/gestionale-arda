@@ -1,169 +1,84 @@
-# Arda - Centro Estetico Olistico | Gestionale
+# Arda — Centro Estetico Olistico | Gestionale
 
-Applicazione web per la gestione del centro estetico **Arda** con prenotazioni, anagrafica clienti, storico trattamenti, schede cliente e sistema di autenticazione.
+Applicazione web per la gestione del centro estetico **Arda**: appuntamenti, anagrafica clienti, storico trattamenti, catalogo servizi e login con ruoli.
 
-## 🚀 Versione Online
-
-Il gestionale è disponibile online per essere usato dall'iPad del centro estetico.
-
-**URL Produzione:** https://arda-centro.it (da configurare)
-
-### Accesso Rapido dall'iPad
-1. Apri Safari
-2. Vai su https://arda-centro.it
-3. Login: admin / admin123
-4. **Aggiungi alla Home:** Condividi → "Aggiungi alla schermata Home"
-
----
-
-## 🎨 Branding
-
-Il gestionale utilizza la palette elegante del logo Arda:
-- **Oro** (#C9A961) - Colore primario
-- **Marrone scuro** (#2C1810) - Sfondo sidebar e accenti
-- **Beige** (#D4B896, #E8D5B7) - Colori secondari
-
-- **Frontend:** React + Bootstrap + Vite
-- **Backend:** Node.js + Express
-- **Database:** JSON locale (file-based)
-
-## Funzionalità
-
-- **Dashboard:** Panoramica appuntamenti del giorno e statistiche
-- **Appuntamenti:** Calendario interattivo con gestione prenotazioni e **controllo conflitti orari**
-- **Clienti:** Anagrafica completa con schede cliente
-- **Servizi:** Catalogo servizi con durata, prezzo e **gestione sconti**
-- **Storico Trattamenti:** Registro trattamenti effettuati per cliente
-- **Sistema di Autenticazione:** Login con ruoli (Admin/Dipendente)
-- **Password Master:** Per modifiche speciali (es. sconti) quando si è dipendenti
-
-## 🔐 Credenziali di Accesso
-
-### Admin (Amministratore)
-- **Username:** admin
-- **Password:** admin123
-- **Permessi:** Accesso completo, può applicare sconti direttamente
-
-### Dipendente
-- **Username:** dipendente
-- **Password:** dip123
-- **Permessi:** Visualizzazione e operazioni base, per sconti deve inserire password master
-
-### Password Master
-- **Password:** master2026
-- **Utilizzo:** Richiesta al dipendente per applicare sconti o modifiche speciali
-
-## 🚫 Controllo Conflitti Appuntamenti
-
-Il sistema impedisce automaticamente di prenotare lo stesso operatore in fasce orarie sovrapposte. Se si tenta di creare un appuntamento in conflitto, verrà mostrato un messaggio di errore con i dettagli del conflitto.
-
-## 📱 Integrazione WhatsApp
-
-Il gestionale include l'integrazione completa con WhatsApp per l'invio automatico di promemoria e messaggi ai clienti.
-
-### Configurazione WhatsApp
-
-1. Vai alla pagina **WhatsApp** nel menu laterale
-2. Scansiona il **QR code** con il tuo telefono:
-   - Apri WhatsApp
-   - Vai su **Impostazioni** → **Dispositivi collegati**
-   - Clicca **Collega dispositivo**
-   - Scansiona il QR code mostrato
-3. Una volta connesso, il sistema può inviare e ricevere messaggi
-
-### Funzionalità WhatsApp
-
-#### Promemoria Automatici
-- Ogni giorno alle **9:00**, il sistema invia automaticamente promemoria per gli appuntamenti del giorno successivo
-- Il messaggio include: data, ora, servizio e operatore
-- Il cliente può rispondere **SI** per confermare o **NO** per annullare
-- Lo stato dell'appuntamento viene aggiornato automaticamente
-
-#### Invio Messaggi Manuali
-- Dalla pagina WhatsApp, puoi inviare messaggi manuali a qualsiasi numero
-- Utile per comunicazioni personalizzate
-
-#### Stato Conferme
-- Nella pagina **Appuntamenti**, vedi lo stato di conferma WhatsApp di ogni appuntamento:
-  - 📱 - Promemoria non ancora inviato (clicca per inviare)
-  - ⏳ In attesa - Promemoria inviato, in attesa di risposta
-  - ✅ Confermato - Cliente ha confermato
-  - ❌ Annullato - Cliente ha annullato
-
-### Note Importanti
-- Il numero WhatsApp deve essere lo stesso usato per registrare il cliente
-- Il QR code scade dopo alcuni minuti, se necessario rigenerarlo
-- WhatsApp deve rimanere connesso per ricevere le risposte dei clienti
-
-Le dipendenze sono già installate. Se necessario reinstallarle:
-
-```bash
-# Backend
-cd backend
-npm install
-
-# Frontend
-cd ../frontend
-npm install
-```
-
-## Avvio dell'applicazione
-
-### 1. Avvia il backend (terminale 1)
-
-```bash
-cd backend
-npm start
-```
-
-Il server backend sarà attivo su `http://localhost:3001`
-
-### 2. Avvia il frontend (terminale 2)
-
-```bash
-cd frontend
-npm run dev
-```
-
-L'applicazione sarà disponibile su `http://localhost:3000`
+Un **unico servizio** in produzione: Express espone le API `/api/*` e serve la build React/Vite dallo stesso dominio.
 
 ## Struttura del progetto
 
 ```
-gestionale-centro-estetico/
-├── backend/
-│   ├── server.js          # Server Express con API
-│   ├── data/              # Database JSON
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── components/    # Componenti React
-│   │   ├── App.jsx        # Componente principale
-│   │   ├── main.jsx       # Entry point
-│   │   └── index.css      # Stili globali
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-└── README.md
+gestionale-arda/
+├── server.js            # Express: API + file statici del frontend + fallback SPA
+├── database.js          # Accesso dati: PostgreSQL se c'è DATABASE_URL, altrimenti JSON locale
+├── whatsapp.js          # Generazione link wa.me per promemoria e messaggi
+├── package.json         # Dipendenze backend + script di build del frontend
+├── railway.json         # Build/start command per Railway
+├── data/db.json         # Database locale (generato automaticamente, non versionato)
+└── frontend/
+    ├── index.html
+    ├── vite.config.js   # Dev server su :3000 con proxy /api → :3001
+    ├── public/logo.jpg
+    └── src/
+        ├── App.jsx      # Layout, sidebar, routing
+        ├── config.js    # API_BASE_URL (vuoto in produzione → stesse origin)
+        └── components/  # Dashboard, Appuntamenti, Clienti, Servizi, Trattamenti, Login, WhatsApp
 ```
 
-## Utilizzo
+## Sviluppo locale
 
-1. Apri il browser su `http://localhost:3000`
-2. Inizia aggiungendo i **Servizi** offerti dal centro
-3. Registra i **Clienti** nell'anagrafica
-4. Crea **Appuntamenti** dal calendario
-5. Registra i **Trattamenti** effettuati nello storico
+```bash
+# 1. Dipendenze backend
+npm install
 
-## Operatori predefiniti
+# 2. Backend su http://localhost:3001
+npm run dev
 
-Il sistema include 3 operatori di esempio:
-- Maria Rossi (Massaggi)
-- Laura Bianchi (Estetica)
-- Anna Verdi (Manicure)
+# 3. Frontend su http://localhost:3000 (proxy /api verso :3001) — in un secondo terminale
+npm run dev:frontend
+```
 
-## Note
+Senza `DATABASE_URL` i dati finiscono in `data/db.json`. Per resettare, elimina quel file: viene ricreato con i dati iniziali.
 
-- I dati sono salvati in `backend/data/db.json`
-- Per resettare i dati, elimina il file `db.json` (verrà ricreato automaticamente)
-- L'applicazione è responsive e funziona su PC, tablet e smartphone
+### Build di produzione in locale
+
+```bash
+npm run build   # installa le dipendenze del frontend e genera frontend/dist
+npm start       # Express serve frontend/dist su http://localhost:3001
+```
+
+## Deploy su Railway
+
+1. Un solo servizio, collegato al repository GitHub.
+2. Aggiungi il plugin **PostgreSQL** e collega la variabile `DATABASE_URL` al servizio.
+3. `railway.json` esegue `npm install && npm --prefix frontend install && npm --prefix frontend run build` in build e `npm start` all'avvio.
+4. Le tabelle vengono create automaticamente al primo avvio (`CREATE TABLE IF NOT EXISTS`) con operatori, utenti e password master di default.
+
+Se `DATABASE_URL` manca o la connessione fallisce, il server ripiega sul JSON locale: su Railway il filesystem è **effimero**, quindi i dati andrebbero persi a ogni redeploy. Controlla nei log la riga `✅ Connesso a PostgreSQL`.
+
+## Funzionalità
+
+- **Dashboard:** appuntamenti del giorno e statistiche
+- **Appuntamenti:** calendario con controllo dei conflitti orari per operatore (409 se la fascia si sovrappone)
+- **Clienti:** anagrafica con telefono, email, note e allergie
+- **Servizi:** catalogo con durata, prezzo, categoria; sconti protetti da password master per il ruolo dipendente
+- **Storico trattamenti:** registro dei trattamenti effettuati per cliente
+- **Login con ruoli:** admin e dipendente
+
+## WhatsApp
+
+L'integrazione è basata su **link `wa.me`**: il gestionale prepara il messaggio e apre WhatsApp (web o app), l'invio resta manuale.
+
+- `GET /api/whatsapp/promemoria/:id` → link con il promemoria dell'appuntamento
+- `GET /api/whatsapp/messaggio?numero=&messaggio=` → link con messaggio libero
+- Dalla pagina **Appuntamenti**, il bottone 📱 apre il promemoria e segna `promemoriaInviato`
+
+Le risposte dei clienti (SI/NO) vanno riportate manualmente sullo stato dell'appuntamento: non esiste un canale di ricezione. Per l'invio realmente automatico serve un provider ufficiale (es. Twilio/WhatsApp Business API).
+
+## Credenziali
+
+Gli utenti e la password master di default sono creati dal seed in `database.js`. **Cambiali prima di esporre il gestionale su internet**, e comunque non scriverli nel README o nel repository.
+
+## Note di sicurezza (da affrontare)
+
+- Le password sono salvate in chiaro e gli endpoint `/api/*` non richiedono autenticazione: chiunque conosca l'URL può leggere e modificare i dati.
+- I dati trattati (telefono, data di nascita, allergie) sono dati personali: servono autenticazione reale, hash delle password e CORS limitato prima di un uso in produzione con clienti veri.

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
+const path = require('path');
 const { db, connectPostgreSQL } = require('./database');
 const whatsapp = require('./whatsapp');
 
@@ -9,6 +10,9 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Servi i file statici del frontend (produzione)
+app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
 
 // Connetti al database all'avvio
 connectPostgreSQL().then(() => {
@@ -49,9 +53,9 @@ app.get('/api/whatsapp/link', (req, res) => {
   });
 });
 
-app.get('/api/whatsapp/promemoria/:id', (req, res) => {
+app.get('/api/whatsapp/promemoria/:id', async (req, res) => {
   try {
-    const result = whatsapp.generaLinkPromemoria(req.params.id);
+    const result = await whatsapp.generaLinkPromemoria(req.params.id);
     res.json(result);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -295,6 +299,11 @@ app.get('/api/operatori', async (req, res) => {
 app.get('/api/dashboard/stats', async (req, res) => {
   const stats = await db.getStats();
   res.json(stats);
+});
+
+// Fallback per SPA - tutte le route non API restituiscono index.html
+app.get('/{*splat}', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {

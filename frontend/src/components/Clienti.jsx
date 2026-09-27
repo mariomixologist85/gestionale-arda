@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Modal, Button, Form } from 'react-bootstrap'
 import { FaPlus, FaEdit, FaTrash, FaUser } from 'react-icons/fa'
+import { API_BASE_URL } from '../config.js'
 
 function Clienti() {
   const [clienti, setClienti] = useState([])
@@ -23,7 +24,7 @@ function Clienti() {
 
   const loadClienti = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/clienti')
+      const res = await axios.get(`${API_BASE_URL}/api/clienti`)
       setClienti(res.data)
     } catch (err) {
       console.error('Errore caricamento clienti:', err)
@@ -62,9 +63,9 @@ function Clienti() {
     e.preventDefault()
     try {
       if (editingCliente) {
-        await axios.put(`http://localhost:3001/api/clienti/${editingCliente.id}`, formData)
+        await axios.put(`${API_BASE_URL}/api/clienti/${editingCliente.id}`, formData)
       } else {
-        await axios.post('http://localhost:3001/api/clienti', formData)
+        await axios.post(`${API_BASE_URL}/api/clienti`, formData)
       }
       handleCloseModal()
       loadClienti()
@@ -76,7 +77,7 @@ function Clienti() {
   const handleDelete = async (id) => {
     if (window.confirm('Sei sicuro di voler eliminare questo cliente?')) {
       try {
-        await axios.delete(`http://localhost:3001/api/clienti/${id}`)
+        await axios.delete(`${API_BASE_URL}/api/clienti/${id}`)
         loadClienti()
       } catch (err) {
         console.error('Errore eliminazione cliente:', err)

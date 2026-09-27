@@ -60,10 +60,16 @@ async function connectPostgreSQL() {
   if (process.env.DATABASE_URL) {
     try {
       const { Pool } = require('pg');
-      pgClient = new Pool({
+      const testClient = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
       });
+
+      // Test connessione
+      await testClient.query('SELECT NOW()');
+      
+      // Se arriva qui, la connessione funziona
+      pgClient = testClient;
 
       // Crea tabelle se non esistono
       await pgClient.query(`
@@ -131,6 +137,12 @@ async function connectPostgreSQL() {
           nome VARCHAR NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS operatori (
+          id VARCHAR PRIMARY KEY,
+          nome VARCHAR NOT NULL,
+          specialita VARCHAR
+        );
+
         CREATE TABLE IF NOT EXISTS config (
           key VARCHAR PRIMARY KEY,
           value VARCHAR NOT NULL
@@ -174,10 +186,41 @@ async function connectPostgreSQL() {
     } catch (error) {
       console.error('❌ Errore connessione PostgreSQL:', error.message);
       console.log('📁 Uso database locale');
+      pgClient = null; // Resetta pgClient se la connessione fallisce
       return false;
     }
   }
   return false;
+}
+
+// Colonne aggiornabili per tabella (whitelist: i nomi non arrivano mai dall'utente)
+const COLONNE_AGGIORNABILI = {
+  clienti: ['nome', 'cognome', 'telefono', 'email', 'dataNascita', 'note', 'allergie'],
+  servizi: ['nome', 'durata', 'prezzo', 'categoria', 'descrizione'],
+  appuntamenti: [
+    'clienteId', 'clienteNome', 'clienteTelefono', 'servizioId', 'servizioNome',
+    'operatoreId', 'operatoreNome', 'data', 'ora', 'durata', 'note', 'stato',
+    'promemoriaInviato', 'dataPromemoria', 'whatsappConferma', 'dataConferma'
+  ]
+};
+
+// Una PUT con solo alcuni campi (es. lo stato del promemoria WhatsApp) non deve azzerare le altre colonne
+async function aggiornaParziale(tabella, id, payload) {
+  const campi = COLONNE_AGGIORNABILI[tabella].filter(c => payload[c] !== undefined);
+  if (campi.length === 0) {
+    const esistente = await pgClient.query(`SELECT * FROM ${tabella} WHERE id = $1`, [id]);
+    return esistente.rows[0] || null;
+  }
+
+  const setClause = campi.map((c, i) => `"${c}" = $${i + 1}`).join(', ');
+  const values = campi.map(c => payload[c]);
+  values.push(id);
+
+  const result = await pgClient.query(
+    `UPDATE ${tabella} SET ${setClause} WHERE id = $${values.length} RETURNING *`,
+    values
+  );
+  return result.rows[0] || null;
 }
 
 // Funzioni database unificate
@@ -207,11 +250,7 @@ const db = {
 
   async updateCliente(id, cliente) {
     if (pgClient) {
-      await pgClient.query(
-        'UPDATE clienti SET nome=$1, cognome=$2, telefono=$3, email=$4, "dataNascita"=$5, note=$6, allergie=$7 WHERE id=$8',
-        [cliente.nome, cliente.cognome, cliente.telefono, cliente.email, cliente.dataNascita, cliente.note, cliente.allergie, id]
-      );
-      return { ...cliente, id };
+      return aggiornaParziale('clienti', id, cliente);
     }
     const data = loadLocalDB();
     const idx = data.clienti.findIndex(c => c.id === id);
@@ -283,11 +322,7 @@ const db = {
 
   async updateAppuntamento(id, app) {
     if (pgClient) {
-      await pgClient.query(
-        `UPDATE appuntamenti SET "clienteId"=$1, "clienteNome"=$2, "clienteTelefono"=$3, "servizioId"=$4, "servizioNome"=$5, "operatoreId"=$6, "operatoreNome"=$7, data=$8, ora=$9, durata=$10, note=$11, stato=$12, "promemoriaInviato"=$13, "dataPromemoria"=$14, "whatsappConferma"=$15, "dataConferma"=$16 WHERE id=$17`,
-        [app.clienteId, app.clienteNome, app.clienteTelefono, app.servizioId, app.servizioNome, app.operatoreId, app.operatoreNome, app.data, app.ora, app.durata, app.note, app.stato, app.promemoriaInviato, app.dataPromemoria, app.whatsappConferma, app.dataConferma, id]
-      );
-      return { ...app, id };
+      return aggiornaParziale('appuntamenti', id, app);
     }
     const data = loadLocalDB();
     const idx = data.appuntamenti.findIndex(a => a.id === id);
@@ -335,11 +370,7 @@ const db = {
 
   async updateServizio(id, servizio) {
     if (pgClient) {
-      await pgClient.query(
-        'UPDATE servizi SET nome=$1, durata=$2, prezzo=$3, categoria=$4, descrizione=$5 WHERE id=$6',
-        [servizio.nome, servizio.durata, servizio.prezzo, servizio.categoria, servizio.descrizione, id]
-      );
-      return { ...servizio, id };
+      return aggiornaParziale('servizi', id, servizio);
     }
     const data = loadLocalDB();
     const idx = data.servizi.findIndex(s => s.id === id);

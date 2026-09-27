@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Modal, Button, Form } from 'react-bootstrap'
 import { FaPlus, FaTrash, FaClipboardList } from 'react-icons/fa'
+import { API_BASE_URL } from '../config.js'
 
 function Trattamenti() {
   const [trattamenti, setTrattamenti] = useState([])
@@ -32,8 +33,8 @@ function Trattamenti() {
   const loadTrattamenti = async () => {
     try {
       const url = filterCliente
-        ? `http://localhost:3001/api/trattamenti?clienteId=${filterCliente}`
-        : 'http://localhost:3001/api/trattamenti'
+        ? `${API_BASE_URL}/api/trattamenti?clienteId=${filterCliente}`
+        : `${API_BASE_URL}/api/trattamenti`
       const res = await axios.get(url)
       setTrattamenti(res.data)
     } catch (err) {
@@ -43,7 +44,7 @@ function Trattamenti() {
 
   const loadClienti = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/clienti')
+      const res = await axios.get(`${API_BASE_URL}/api/clienti`)
       setClienti(res.data)
     } catch (err) {
       console.error('Errore caricamento clienti:', err)
@@ -52,7 +53,7 @@ function Trattamenti() {
 
   const loadServizi = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/servizi')
+      const res = await axios.get(`${API_BASE_URL}/api/servizi`)
       setServizi(res.data)
     } catch (err) {
       console.error('Errore caricamento servizi:', err)
@@ -61,7 +62,7 @@ function Trattamenti() {
 
   const loadOperatori = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/operatori')
+      const res = await axios.get(`${API_BASE_URL}/api/operatori`)
       setOperatori(res.data)
     } catch (err) {
       console.error('Errore caricamento operatori:', err)
@@ -127,7 +128,7 @@ function Trattamenti() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      await axios.post('http://localhost:3001/api/trattamenti', formData)
+      await axios.post(`${API_BASE_URL}/api/trattamenti`, formData)
       handleCloseModal()
       loadTrattamenti()
     } catch (err) {
@@ -138,7 +139,7 @@ function Trattamenti() {
   const handleDelete = async (id) => {
     if (window.confirm('Sei sicuro di voler eliminare questo trattamento?')) {
       try {
-        await axios.delete(`http://localhost:3001/api/trattamenti/${id}`)
+        await axios.delete(`${API_BASE_URL}/api/trattamenti/${id}`)
         loadTrattamenti()
       } catch (err) {
         console.error('Errore eliminazione trattamento:', err)
