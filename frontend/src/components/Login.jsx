@@ -20,6 +20,7 @@ function Login({ onLogin }) {
         username,
         password
       })
+      localStorage.setItem('token', res.data.token)
       onLogin(res.data)
     } catch (err) {
       setError(err.response?.data?.error || 'Errore di connessione')

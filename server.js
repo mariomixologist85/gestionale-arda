@@ -3,19 +3,30 @@ const cors = require('cors');
 const crypto = require('crypto');
 const path = require('path');
 const { db, connectPostgreSQL } = require('./database');
+const { verificaPassword, nuovoToken, richiediAuth } = require('./auth');
 const whatsapp = require('./whatsapp');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// In produzione il frontend è servito dallo stesso dominio: CORS serve solo in sviluppo
+const originiConsentite = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [])
+];
+app.use(cors({ origin: originiConsentite }));
 app.use(express.json());
 
 // Servi i file statici del frontend (produzione)
 app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
 
-// Connetti al database all'avvio
-connectPostgreSQL().then(() => {
+// Connetti al database all'avvio e migra le eventuali password ancora in chiaro
+connectPostgreSQL().then(async () => {
+  const migrate = await db.migraPasswordInChiaro();
+  if (migrate > 0) {
+    console.log(`🔐 Migrata/e ${migrate} password in chiaro`);
+  }
   console.log(' Server pronto');
 });
 
@@ -23,16 +34,36 @@ connectPostgreSQL().then(() => {
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   const utenti = await db.getUtenti();
-  const utente = utenti.find(u => u.username === username && u.password === password);
-  if (!utente) {
+  const utente = utenti.find(u => u.username === username);
+  if (!utente || !verificaPassword(password || '', utente.password)) {
     return res.status(401).json({ error: 'Credenziali non valide' });
   }
+
+  const sessione = {
+    token: nuovoToken(),
+    utenteId: utente.id,
+    username: utente.username,
+    ruolo: utente.ruolo,
+    nome: utente.nome,
+    creatoIl: new Date().toISOString()
+  };
+  await db.creaSessione(sessione);
+
   res.json({
+    token: sessione.token,
     id: utente.id,
     username: utente.username,
     ruolo: utente.ruolo,
     nome: utente.nome
   });
+});
+
+// Da qui in poi tutte le /api/* richiedono il token di sessione
+app.use('/api', richiediAuth(db));
+
+app.post('/api/logout', async (req, res) => {
+  await db.eliminaSessione(req.headers.authorization.slice(7));
+  res.json({ success: true });
 });
 
 app.post('/api/verifica-master', async (req, res) => {

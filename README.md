@@ -74,11 +74,12 @@ L'integrazione è basata su **link `wa.me`**: il gestionale prepara il messaggio
 
 Le risposte dei clienti (SI/NO) vanno riportate manualmente sullo stato dell'appuntamento: non esiste un canale di ricezione. Per l'invio realmente automatico serve un provider ufficiale (es. Twilio/WhatsApp Business API).
 
-## Credenziali
+## Autenticazione
 
-Gli utenti e la password master di default sono creati dal seed in `database.js`. **Cambiali prima di esporre il gestionale su internet**, e comunque non scriverli nel README o nel repository.
+- `POST /api/login` verifica username e password e restituisce un **token di sessione**; il frontend lo salva in `localStorage` e lo invia come `Authorization: Bearer <token>`.
+- Tutte le altre route `/api/*` passano da un middleware che valida il token contro la tabella `sessioni` (in locale `sessioni` dentro `data/db.json`): senza token valido rispondono 401.
+- Le sessioni durano 30 giorni e vengono revocate da `POST /api/logout` o alla scadenza.
+- Le password sono salvate come hash **scrypt** (`scrypt$sale$hash`); all'avvio il server converte automaticamente eventuali password ancora in chiaro.
+- CORS limitato a `http://localhost:3000`, `http://localhost:5173` e agli host extra indicati in `CORS_ORIGINS` (separati da virgola): in produzione il frontend è servito dallo stesso dominio, quindi non serve alcun header CORS.
 
-## Note di sicurezza (da affrontare)
-
-- Le password sono salvate in chiaro e gli endpoint `/api/*` non richiedono autenticazione: chiunque conosca l'URL può leggere e modificare i dati.
-- I dati trattati (telefono, data di nascita, allergie) sono dati personali: servono autenticazione reale, hash delle password e CORS limitato prima di un uso in produzione con clienti veri.
+Gli utenti e la password master di default sono creati dal seed in `database.js`. **Cambiali**: sono comparsi nelle versioni precedenti del repository e devono considerarsi compromessi.

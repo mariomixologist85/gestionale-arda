@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { hashPassword, isHashed, DURATA_SESSIONE_MS } = require('./auth');
 
 const DB_PATH = path.join(__dirname, 'data', 'db.json');
 
@@ -27,9 +28,10 @@ function loadLocalDB() {
         { id: 'op3', nome: 'Anna Verdi', specialita: 'Manicure' }
       ],
       utenti: [
-        { id: 'usr1', username: 'admin', password: 'admin123', ruolo: 'admin', nome: 'Amministratore' },
-        { id: 'usr2', username: 'dipendente', password: 'dip123', ruolo: 'dipendente', nome: 'Dipendente' }
+        { id: 'usr1', username: 'admin', password: hashPassword('admin123'), ruolo: 'admin', nome: 'Amministratore' },
+        { id: 'usr2', username: 'dipendente', password: hashPassword('dip123'), ruolo: 'dipendente', nome: 'Dipendente' }
       ],
+      sessioni: [],
       passwordMaster: 'master2026'
     };
     fs.writeFileSync(DB_PATH, JSON.stringify(initial, null, 2), 'utf-8');
@@ -38,8 +40,8 @@ function loadLocalDB() {
   const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
   if (!db.utenti) {
     db.utenti = [
-      { id: 'usr1', username: 'admin', password: 'admin123', ruolo: 'admin', nome: 'Amministratore' },
-      { id: 'usr2', username: 'dipendente', password: 'dip123', ruolo: 'dipendente', nome: 'Dipendente' }
+      { id: 'usr1', username: 'admin', password: hashPassword('admin123'), ruolo: 'admin', nome: 'Amministratore' },
+      { id: 'usr2', username: 'dipendente', password: hashPassword('dip123'), ruolo: 'dipendente', nome: 'Dipendente' }
     ];
   }
   if (!db.passwordMaster) {
@@ -143,6 +145,15 @@ async function connectPostgreSQL() {
           specialita VARCHAR
         );
 
+        CREATE TABLE IF NOT EXISTS sessioni (
+          token VARCHAR PRIMARY KEY,
+          "utenteId" VARCHAR,
+          username VARCHAR,
+          ruolo VARCHAR,
+          nome VARCHAR,
+          "creatoIl" VARCHAR
+        );
+
         CREATE TABLE IF NOT EXISTS config (
           key VARCHAR PRIMARY KEY,
           value VARCHAR NOT NULL
@@ -165,8 +176,8 @@ async function connectPostgreSQL() {
 
       // Inserisci utenti default se non esistono
       const utenti = [
-        { id: 'usr1', username: 'admin', password: 'admin123', ruolo: 'admin', nome: 'Amministratore' },
-        { id: 'usr2', username: 'dipendente', password: 'dip123', ruolo: 'dipendente', nome: 'Dipendente' }
+        { id: 'usr1', username: 'admin', password: hashPassword('admin123'), ruolo: 'admin', nome: 'Amministratore' },
+        { id: 'usr2', username: 'dipendente', password: hashPassword('dip123'), ruolo: 'dipendente', nome: 'Dipendente' }
       ];
 
       for (const utente of utenti) {
@@ -455,6 +466,69 @@ const db = {
       return result.rows[0]?.value || 'master2026';
     }
     return loadLocalDB().passwordMaster || 'master2026';
+  },
+
+  // Sessioni di autenticazione
+  async creaSessione(sessione) {
+    if (pgClient) {
+      await pgClient.query(
+        'INSERT INTO sessioni (token, "utenteId", username, ruolo, nome, "creatoIl") VALUES ($1, $2, $3, $4, $5, $6)',
+        [sessione.token, sessione.utenteId, sessione.username, sessione.ruolo, sessione.nome, sessione.creatoIl]
+      );
+      return sessione;
+    }
+    const data = loadLocalDB();
+    data.sessioni = data.sessioni || [];
+    data.sessioni.push(sessione);
+    saveLocalDB(data);
+    return sessione;
+  },
+
+  async getSessione(token) {
+    let sessione = null;
+    if (pgClient) {
+      const result = await pgClient.query('SELECT * FROM sessioni WHERE token = $1', [token]);
+      sessione = result.rows[0] || null;
+    } else {
+      const data = loadLocalDB();
+      sessione = (data.sessioni || []).find(s => s.token === token) || null;
+    }
+
+    if (!sessione) return null;
+    if (Date.now() - new Date(sessione.creatoIl).getTime() > DURATA_SESSIONE_MS) {
+      await this.eliminaSessione(token);
+      return null;
+    }
+    return sessione;
+  },
+
+  async eliminaSessione(token) {
+    if (pgClient) {
+      await pgClient.query('DELETE FROM sessioni WHERE token = $1', [token]);
+    } else {
+      const data = loadLocalDB();
+      data.sessioni = (data.sessioni || []).filter(s => s.token !== token);
+      saveLocalDB(data);
+    }
+    return { success: true };
+  },
+
+  // Migrazione una tantum: le password salvate in chiaro vengono sostituite dal loro hash
+  async migraPasswordInChiaro() {
+    if (pgClient) {
+      const result = await pgClient.query("SELECT id, password FROM utenti WHERE password NOT LIKE 'scrypt$%'");
+      for (const utente of result.rows) {
+        await pgClient.query('UPDATE utenti SET password = $1 WHERE id = $2', [hashPassword(utente.password), utente.id]);
+      }
+      return result.rows.length;
+    }
+    const data = loadLocalDB();
+    const daMigrare = (data.utenti || []).filter(u => !isHashed(u.password));
+    for (const utente of daMigrare) {
+      utente.password = hashPassword(utente.password);
+    }
+    if (daMigrare.length > 0) saveLocalDB(data);
+    return daMigrare.length;
   },
 
   // Dashboard stats

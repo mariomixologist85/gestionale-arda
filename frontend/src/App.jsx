@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import { FaHome, FaCalendarAlt, FaUsers, FaClipboardList, FaConciergeBell, FaSignOutAlt, FaWhatsapp, FaBars, FaTimes } from 'react-icons/fa'
 import { Button } from 'react-bootstrap'
+import { API_BASE_URL } from './config.js'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import Appuntamenti from './components/Appuntamenti'
@@ -17,7 +19,7 @@ function App() {
 
   useEffect(() => {
     const utenteSalvato = localStorage.getItem('utente')
-    if (utenteSalvato) {
+    if (utenteSalvato && localStorage.getItem('token')) {
       setUtente(JSON.parse(utenteSalvato))
     }
   }, [])
@@ -27,7 +29,13 @@ function App() {
     localStorage.setItem('utente', JSON.stringify(utenteData))
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${API_BASE_URL}/api/logout`)
+    } catch {
+      // sessione già scaduta o server irraggiungibile: scade comunque da sola
+    }
+    localStorage.removeItem('token')
     setUtente(null)
     localStorage.removeItem('utente')
     navigate('/')
