@@ -81,10 +81,10 @@ async function connectPostgreSQL() {
           cognome VARCHAR NOT NULL,
           telefono VARCHAR,
           email VARCHAR,
-          dataNascita VARCHAR,
+          "dataNascita" VARCHAR,
           note TEXT,
           allergie TEXT,
-          dataCreazione VARCHAR
+          "dataCreazione" VARCHAR
         );
 
         CREATE TABLE IF NOT EXISTS servizi (
@@ -158,6 +158,20 @@ async function connectPostgreSQL() {
           key VARCHAR PRIMARY KEY,
           value VARCHAR NOT NULL
         );
+      `);
+
+      // I database creati dalle versioni precedenti hanno queste colonne minuscole,
+      // mentre le query le referenziano con le virgolette: rinomina idempotente
+      await pgClient.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clienti' AND column_name = 'datanascita') THEN
+            ALTER TABLE clienti RENAME COLUMN datanascita TO "dataNascita";
+          END IF;
+          IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'clienti' AND column_name = 'datacreazione') THEN
+            ALTER TABLE clienti RENAME COLUMN datacreazione TO "dataCreazione";
+          END IF;
+        END $$;
       `);
 
       // Inserisci operatori se non esistono
