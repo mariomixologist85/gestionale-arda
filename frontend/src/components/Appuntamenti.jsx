@@ -3,6 +3,7 @@ import axios from 'axios'
 import { Modal, Button, Form } from 'react-bootstrap'
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaCheck, FaTimes, FaUndo } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
+import { apriWhatsApp } from '../utils/apriWhatsApp.js'
 import SelezioneCliente from './SelezioneCliente'
 
 function Appuntamenti({ utente }) {
@@ -173,8 +174,12 @@ function Appuntamenti({ utente }) {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/whatsapp/promemoria/${id}`)
 
-      // Apri WhatsApp con il link generato
-      window.open(res.data.link, '_blank')
+      // Una sola scheda WhatsApp per tutti i promemoria: vedi utils/apriWhatsApp.js
+      const finestra = apriWhatsApp(res.data.link)
+      if (!finestra) {
+        alert('Il browser ha bloccato l\'apertura di WhatsApp: consenti i popup per questo sito e riprova')
+        return
+      }
 
       // Aggiorna stato promemoria inviato
       await axios.put(`${API_BASE_URL}/api/appuntamenti/${id}`, {

@@ -72,6 +72,7 @@ L'integrazione è basata su **link `wa.me`**: il gestionale prepara il messaggio
 - `GET /api/whatsapp/promemoria/:id` → link con il promemoria dell'appuntamento
 - `GET /api/whatsapp/messaggio?numero=&messaggio=` → link con messaggio libero
 - Dalla pagina **Appuntamenti**, il bottone 📱 apre il promemoria e segna `promemoriaInviato`; la riga passa a **⏳ In attesa** con i bottoni ✅ e ❌
+- Ogni promemoria apre una scheda di WhatsApp: `api.whatsapp.com` risponde con `Cross-Origin-Opener-Policy: same-origin-allow-popups`, che recide il legame con la scheda del gestionale, quindi la scheda aperta non è più né riusabile né chiudibile da codice (`utils/apriWhatsApp.js`). Se il browser blocca il popup il promemoria **non** viene segnato come inviato
 - La risposta del cliente arriva sul telefono di chi gestisce il centro: un click su ✅ o ❌ la registra sull'appuntamento (`whatsappConferma`, `dataConferma`) e ne allinea lo stato (`confermato`/`annullato`). Il bottone ↺ annulla una risposta registrata per errore
 
 Non esiste un canale di ricezione: il gestionale non legge le risposte da WhatsApp, si limita a registrare quella che l'operatore ha letto sul telefono. `promemoriaInviato` viene segnato all'apertura del link `wa.me`, quindi non garantisce che il messaggio sia stato poi davvero inviato. Per un'automazione completa (il cliente risponde "SI" e l'appuntamento si aggiorna da solo) serve un provider ufficiale — Meta WhatsApp Business API o Twilio — con webhook pubblico e numero di telefono dedicato.

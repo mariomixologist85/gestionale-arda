@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import { Card, Alert, Form, Button } from 'react-bootstrap'
 import { FaWhatsapp, FaCheckCircle, FaInfoCircle } from 'react-icons/fa'
+import { apriWhatsApp } from '../utils/apriWhatsApp.js'
 
 function WhatsApp() {
   const [numero, setNumero] = useState('')
@@ -20,8 +21,11 @@ function WhatsApp() {
     const messaggioCodificato = encodeURIComponent(messaggio)
     const link = `https://wa.me/${numeroPulito}?text=${messaggioCodificato}`
     
-    // Apri WhatsApp in una nuova scheda
-    window.open(link, '_blank')
+    // Una sola scheda WhatsApp per tutti i messaggi: vedi utils/apriWhatsApp.js
+    const finestra = apriWhatsApp(link)
+    if (!finestra) {
+      alert('Il browser ha bloccato l\'apertura di WhatsApp: consenti i popup per questo sito e riprova')
+    }
   }
 
   return (
@@ -45,7 +49,7 @@ function WhatsApp() {
             <strong>Come funziona:</strong>
             <ul className="mb-0 mt-2">
               <li>Clicca il bottone WhatsApp accanto a ogni appuntamento</li>
-              <li>Si apre WhatsApp (web o app) con il messaggio già pronto</li>
+              <li>Si apre WhatsApp (web o app) con il messaggio già pronto, sempre nella stessa scheda</li>
               <li>Clicca <strong>Invia</strong> per inviare il messaggio</li>
               <li>Il cliente può rispondere SI per confermare o NO per annullare</li>
             </ul>
@@ -134,9 +138,10 @@ function WhatsApp() {
 
             <h6>✅ Gestione risposte:</h6>
             <ul className="mb-0">
-              <li>Quando il cliente risponde <strong>SI</strong> → Aggiorna lo stato a "Confermato"</li>
-              <li>Quando il cliente risponde <strong>NO</strong> → Aggiorna lo stato a "Annullato"</li>
-              <li>Aggiorna manualmente lo stato nell'appuntamento</li>
+              <li>La risposta del cliente arriva sul telefono del centro, non sul gestionale</li>
+              <li>Se risponde <strong>SI</strong> → clicca ✅ nella colonna WhatsApp dell'appuntamento</li>
+              <li>Se risponde <strong>NO</strong> → clicca ❌: la risposta viene registrata e lo stato passa ad "annullato"</li>
+              <li>Con ↺ annulli una risposta registrata per errore</li>
             </ul>
           </div>
 
