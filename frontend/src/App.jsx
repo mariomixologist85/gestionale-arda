@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { FaHome, FaCalendarAlt, FaUsers, FaClipboardList, FaConciergeBell, FaSignOutAlt, FaWhatsapp, FaBars, FaTimes } from 'react-icons/fa'
+import { FaHome, FaCalendarAlt, FaUsers, FaClipboardList, FaConciergeBell, FaSignOutAlt, FaWhatsapp, FaBars, FaTimes, FaUserNurse } from 'react-icons/fa'
 import { Button } from 'react-bootstrap'
 import { API_BASE_URL } from './config.js'
 import Login from './components/Login'
@@ -10,6 +10,7 @@ import Appuntamenti from './components/Appuntamenti'
 import Clienti from './components/Clienti'
 import Servizi from './components/Servizi'
 import Trattamenti from './components/Trattamenti'
+import Operatori from './components/Operatori'
 import WhatsApp from './components/WhatsApp'
 
 function App() {
@@ -115,6 +116,11 @@ function App() {
             </NavLink>
           </li>
           <li className="nav-item">
+            <NavLink to="/operatori" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+              <FaUserNurse /> Operatori
+            </NavLink>
+          </li>
+          <li className="nav-item">
             <NavLink to="/trattamenti" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
               <FaClipboardList /> Storico Trattamenti
             </NavLink>
@@ -142,6 +148,7 @@ function App() {
           <Route path="/appuntamenti" element={<Appuntamenti utente={utente} />} />
           <Route path="/clienti" element={<Clienti utente={utente} />} />
           <Route path="/servizi" element={<Servizi utente={utente} />} />
+          <Route path="/operatori" element={<Operatori />} />
           <Route path="/trattamenti" element={<Trattamenti utente={utente} />} />
           <Route path="/whatsapp" element={<WhatsApp />} />
         </Routes>

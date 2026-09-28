@@ -326,6 +326,31 @@ app.get('/api/operatori', async (req, res) => {
   res.json(operatori);
 });
 
+app.post('/api/operatori', async (req, res) => {
+  const { nome, specialita } = req.body;
+  if (!nome || !String(nome).trim()) {
+    return res.status(400).json({ error: 'Il nome è obbligatorio' });
+  }
+  const operatore = await db.addOperatore({ nome: String(nome).trim(), specialita: specialita || '' });
+  res.status(201).json(operatore);
+});
+
+app.put('/api/operatori/:id', async (req, res) => {
+  const operatore = await db.updateOperatore(req.params.id, req.body);
+  if (!operatore) {
+    return res.status(404).json({ error: 'Operatore non trovato' });
+  }
+  res.json(operatore);
+});
+
+app.delete('/api/operatori/:id', async (req, res) => {
+  const eliminato = await db.deleteOperatore(req.params.id);
+  if (!eliminato) {
+    return res.status(404).json({ error: 'Operatore non trovato' });
+  }
+  res.json({ success: true });
+});
+
 // ===== DASHBOARD STATS =====
 app.get('/api/dashboard/stats', async (req, res) => {
   const stats = await db.getStats();

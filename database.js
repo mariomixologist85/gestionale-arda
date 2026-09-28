@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { hashPassword, isHashed, DURATA_SESSIONE_MS } = require('./auth');
 
 const DB_PATH = path.join(__dirname, 'data', 'db.json');
@@ -222,6 +223,7 @@ async function connectPostgreSQL() {
 const COLONNE_AGGIORNABILI = {
   clienti: ['nome', 'cognome', 'telefono', 'email', 'dataNascita', 'note', 'allergie'],
   servizi: ['nome', 'durata', 'prezzo', 'categoria', 'descrizione'],
+  operatori: ['nome', 'specialita'],
   appuntamenti: [
     'clienteId', 'clienteNome', 'clienteTelefono', 'servizioId', 'servizioNome',
     'operatoreId', 'operatoreNome', 'data', 'ora', 'durata', 'note', 'stato',
@@ -572,17 +574,55 @@ const db = {
     };
   },
 
-  // Operatori (dati statici)
+  // Operatori
   async getOperatori() {
     if (pgClient) {
       const result = await pgClient.query('SELECT * FROM operatori ORDER BY nome');
       return result.rows;
     }
-    return [
-      { id: 'op1', nome: 'Maria Rossi', specialita: 'Massaggi' },
-      { id: 'op2', nome: 'Laura Bianchi', specialita: 'Estetica' },
-      { id: 'op3', nome: 'Anna Verdi', specialita: 'Manicure' }
-    ];
+    return loadLocalDB().operatori || [];
+  },
+
+  async addOperatore(operatore) {
+    const nuovo = {
+      id: crypto.randomUUID(),
+      nome: operatore.nome,
+      specialita: operatore.specialita || ''
+    };
+    if (pgClient) {
+      await pgClient.query('INSERT INTO operatori (id, nome, specialita) VALUES ($1, $2, $3)', [nuovo.id, nuovo.nome, nuovo.specialita]);
+      return nuovo;
+    }
+    const data = loadLocalDB();
+    data.operatori = data.operatori || [];
+    data.operatori.push(nuovo);
+    saveLocalDB(data);
+    return nuovo;
+  },
+
+  async updateOperatore(id, operatore) {
+    if (pgClient) {
+      return aggiornaParziale('operatori', id, operatore);
+    }
+    const data = loadLocalDB();
+    const idx = (data.operatori || []).findIndex(o => o.id === id);
+    if (idx === -1) return null;
+    data.operatori[idx] = { ...data.operatori[idx], ...operatore, id };
+    saveLocalDB(data);
+    return data.operatori[idx];
+  },
+
+  async deleteOperatore(id) {
+    if (pgClient) {
+      const result = await pgClient.query('DELETE FROM operatori WHERE id = $1', [id]);
+      return result.rowCount > 0;
+    }
+    const data = loadLocalDB();
+    const idx = (data.operatori || []).findIndex(o => o.id === id);
+    if (idx === -1) return false;
+    data.operatori.splice(idx, 1);
+    saveLocalDB(data);
+    return true;
   }
 };
 
