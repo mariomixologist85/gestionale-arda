@@ -29,10 +29,11 @@ function loadLocalDB() {
         { id: 'op3', nome: 'Anna Verdi', specialita: 'Manicure' }
       ],
       utenti: [
-        { id: 'usr1', username: 'admin', password: hashPassword('admin123'), ruolo: 'admin', nome: 'Amministratore' },
-        { id: 'usr2', username: 'dipendente', password: hashPassword('dip123'), ruolo: 'dipendente', nome: 'Dipendente' }
+        { id: 'usr1', username: 'admin', password: hashPassword('admin123'), ruolo: 'admin', nome: 'Amministratore', email: '', passwordDaCambiare: true },
+        { id: 'usr2', username: 'dipendente', password: hashPassword('dip123'), ruolo: 'dipendente', nome: 'Dipendente', email: '', passwordDaCambiare: true }
       ],
       sessioni: [],
+      reimpostazioni: [],
       passwordMaster: 'master2026'
     };
     fs.writeFileSync(DB_PATH, JSON.stringify(initial, null, 2), 'utf-8');
@@ -41,9 +42,12 @@ function loadLocalDB() {
   const db = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
   if (!db.utenti) {
     db.utenti = [
-      { id: 'usr1', username: 'admin', password: hashPassword('admin123'), ruolo: 'admin', nome: 'Amministratore' },
-      { id: 'usr2', username: 'dipendente', password: hashPassword('dip123'), ruolo: 'dipendente', nome: 'Dipendente' }
+      { id: 'usr1', username: 'admin', password: hashPassword('admin123'), ruolo: 'admin', nome: 'Amministratore', email: '', passwordDaCambiare: true },
+      { id: 'usr2', username: 'dipendente', password: hashPassword('dip123'), ruolo: 'dipendente', nome: 'Dipendente', email: '', passwordDaCambiare: true }
     ];
+  }
+  if (!db.reimpostazioni) {
+    db.reimpostazioni = [];
   }
   if (!db.passwordMaster) {
     db.passwordMaster = 'master2026';
@@ -137,7 +141,17 @@ async function connectPostgreSQL() {
           username VARCHAR UNIQUE NOT NULL,
           password VARCHAR NOT NULL,
           ruolo VARCHAR NOT NULL,
-          nome VARCHAR NOT NULL
+          nome VARCHAR NOT NULL,
+          email VARCHAR,
+          "passwordDaCambiare" BOOLEAN DEFAULT false
+        );
+
+        CREATE TABLE IF NOT EXISTS reimpostazioni (
+          token VARCHAR PRIMARY KEY,
+          "utenteId" VARCHAR NOT NULL,
+          "creatoIl" VARCHAR NOT NULL,
+          scadenza VARCHAR NOT NULL,
+          usato BOOLEAN DEFAULT false
         );
 
         CREATE TABLE IF NOT EXISTS operatori (
@@ -173,6 +187,13 @@ async function connectPostgreSQL() {
             ALTER TABLE clienti RENAME COLUMN datacreazione TO "dataCreazione";
           END IF;
         END $$;
+      `);
+
+      // I database creati dalle versioni precedenti non hanno email e flag password:
+      // aggiunta idempotente, così il recupero password funziona anche sugli impianti esistenti
+      await pgClient.query(`
+        ALTER TABLE utenti ADD COLUMN IF NOT EXISTS email VARCHAR;
+        ALTER TABLE utenti ADD COLUMN IF NOT EXISTS "passwordDaCambiare" BOOLEAN DEFAULT false;
       `);
 
       // Inserisci operatori se non esistono
@@ -224,6 +245,7 @@ const COLONNE_AGGIORNABILI = {
   clienti: ['nome', 'cognome', 'telefono', 'email', 'dataNascita', 'note', 'allergie'],
   servizi: ['nome', 'durata', 'prezzo', 'categoria', 'descrizione'],
   operatori: ['nome', 'specialita'],
+  utenti: ['nome', 'email', 'ruolo', 'password', 'passwordDaCambiare'],
   appuntamenti: [
     'clienteId', 'clienteNome', 'clienteTelefono', 'servizioId', 'servizioNome',
     'operatoreId', 'operatoreNome', 'data', 'ora', 'durata', 'note', 'stato',
@@ -506,15 +528,94 @@ const db = {
     return (loadLocalDB().utenti || []).find(u => u.id === id) || null;
   },
 
-  async aggiornaPasswordUtente(id, passwordHash) {
+  async addUtente(utente) {
     if (pgClient) {
-      const result = await pgClient.query('UPDATE utenti SET password = $1 WHERE id = $2', [passwordHash, id]);
-      return result.rowCount > 0;
+      await pgClient.query(
+        'INSERT INTO utenti (id, username, password, ruolo, nome, email, "passwordDaCambiare") VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [utente.id, utente.username, utente.password, utente.ruolo, utente.nome, utente.email || '', utente.passwordDaCambiare || false]
+      );
+      return utente;
     }
     const data = loadLocalDB();
-    const utente = (data.utenti || []).find(u => u.id === id);
-    if (!utente) return false;
-    utente.password = passwordHash;
+    data.utenti = data.utenti || [];
+    data.utenti.push(utente);
+    saveLocalDB(data);
+    return utente;
+  },
+
+  async aggiornaUtente(id, campi) {
+    if (pgClient) {
+      return aggiornaParziale('utenti', id, campi);
+    }
+    const data = loadLocalDB();
+    const idx = (data.utenti || []).findIndex(u => u.id === id);
+    if (idx === -1) return null;
+    data.utenti[idx] = { ...data.utenti[idx], ...campi, id };
+    saveLocalDB(data);
+    return data.utenti[idx];
+  },
+
+  // Il recupero password accetta sia lo username sia l'email associata
+  async getUtentePerAccesso(identificativo) {
+    const cercato = (identificativo || '').trim().toLowerCase();
+    if (!cercato) return null;
+    if (pgClient) {
+      const result = await pgClient.query(
+        'SELECT * FROM utenti WHERE lower(username) = $1 OR lower(email) = $1 LIMIT 1',
+        [cercato]
+      );
+      return result.rows[0] || null;
+    }
+    return (loadLocalDB().utenti || []).find(u =>
+      (u.username || '').toLowerCase() === cercato || (u.email || '').toLowerCase() === cercato
+    ) || null;
+  },
+
+  async eliminaSessioniUtente(utenteId) {
+    if (pgClient) {
+      const result = await pgClient.query('DELETE FROM sessioni WHERE "utenteId" = $1', [utenteId]);
+      return result.rowCount;
+    }
+    const data = loadLocalDB();
+    const prima = (data.sessioni || []).length;
+    data.sessioni = (data.sessioni || []).filter(s => s.utenteId !== utenteId);
+    saveLocalDB(data);
+    return prima - data.sessioni.length;
+  },
+
+  // Token monouso e a scadenza per il link di reimpostazione inviato via email
+  async creaReimpostazione(reimpostazione) {
+    if (pgClient) {
+      await pgClient.query(
+        'INSERT INTO reimpostazioni (token, "utenteId", "creatoIl", scadenza, usato) VALUES ($1, $2, $3, $4, false)',
+        [reimpostazione.token, reimpostazione.utenteId, reimpostazione.creatoIl, reimpostazione.scadenza]
+      );
+      return reimpostazione;
+    }
+    const data = loadLocalDB();
+    data.reimpostazioni = data.reimpostazioni || [];
+    data.reimpostazioni.push({ ...reimpostazione, usato: false });
+    saveLocalDB(data);
+    return reimpostazione;
+  },
+
+  async getReimpostazione(token) {
+    if (pgClient) {
+      const result = await pgClient.query('SELECT * FROM reimpostazioni WHERE token = $1', [token]);
+      return result.rows[0] || null;
+    }
+    return (loadLocalDB().reimpostazioni || []).find(r => r.token === token) || null;
+  },
+
+  async consumaReimpostazione(token) {
+    if (pgClient) {
+      await pgClient.query('UPDATE reimpostazioni SET usato = true WHERE token = $1', [token]);
+      return true;
+    }
+    const data = loadLocalDB();
+    const richiesta = (data.reimpostazioni || []).find(r => r.token === token);
+    if (!richiesta) return false;
+    richiesta.usato = true;
     saveLocalDB(data);
     return true;
   },

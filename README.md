@@ -10,7 +10,9 @@ Un **unico servizio** in produzione: Express espone le API `/api/*` e serve la b
 gestionale-arda/
 ├── server.js            # Express: API + file statici del frontend + fallback SPA
 ├── database.js          # Accesso dati: PostgreSQL se c'è DATABASE_URL, altrimenti JSON locale
+├── auth.js              # Hash scrypt delle password, token di sessione, middleware Bearer
 ├── whatsapp.js          # Generazione link wa.me per promemoria e messaggi
+├── email.js             # Email transazionali (credenziali e recupero password) via API Brevo
 ├── package.json         # Dipendenze backend + script di build del frontend
 ├── .railway/railway.ts  # Infrastruttura Railway (IaC): repo, build, start, DATABASE_URL
 ├── data/db.json         # Database locale (generato automaticamente, non versionato)
@@ -23,7 +25,7 @@ gestionale-arda/
         ├── config.js    # API_BASE_URL (vuoto in produzione → stesse origin)
         ├── utils/       # ricerca.js (confronto testi), apriWhatsApp.js (apertura scheda)
         └── components/  # Dashboard, Appuntamenti, Clienti, Servizi, Trattamenti, Operatori,
-                         # Login, WhatsApp, Impostazioni, SelezioneCliente (ricerca cliente riutilizzata)
+                         # Login, ReimpostaPassword, WhatsApp, Impostazioni, SelezioneCliente
 ```
 
 ## Sviluppo locale
@@ -65,7 +67,8 @@ Se `DATABASE_URL` manca o la connessione fallisce, il server ripiega sul JSON lo
 - **Servizi:** catalogo con durata, prezzo, categoria; sconti protetti da password master per il ruolo dipendente
 - **Storico trattamenti:** registro dei trattamenti effettuati per cliente
 - **Login con ruoli:** admin e dipendente
-- **Impostazioni:** cambio della propria password, reset degli account e password master (le ultime due solo admin)
+- **Impostazioni:** email e password del proprio account; per l'admin anche creazione e modifica degli account, reset delle password e password master
+- **Recupero password:** dalla schermata di login, "Password dimenticata?" invia per email un collegamento monouso valido 30 minuti
 
 ## WhatsApp
 
@@ -83,11 +86,27 @@ Non esiste un canale di ricezione: il gestionale non legge le risposte da WhatsA
 
 - `POST /api/login` verifica username e password e restituisce un **token di sessione**; il frontend lo salva in `localStorage` e lo invia come `Authorization: Bearer <token>`.
 - Tutte le altre route `/api/*` passano da un middleware che valida il token contro la tabella `sessioni` (in locale `sessioni` dentro `data/db.json`): senza token valido rispondono 401.
-- Le sessioni durano 30 giorni e vengono revocate da `POST /api/logout` o alla scadenza. Il cambio password **non** revoca le sessioni già aperte: restano valide fino alla scadenza.
+- Le sessioni durano 30 giorni e vengono revocate da `POST /api/logout` o alla scadenza. Il cambio password volontario **non** revoca le sessioni già aperte; una reimpostazione (via link email o fatta dall'admin) invece **le chiude tutte**, perché di solito significa che la password era nota a qualcun altro.
 - Le password sono salvate come hash **scrypt** (`scrypt$sale$hash`); all'avvio il server converte automaticamente eventuali password ancora in chiaro, compresa la password master (`migraPasswordMasterInChiaro`).
-- La pagina **Impostazioni** gestisce le credenziali: `POST /api/password` cambia la propria (serve la password attuale), `GET /api/utenti` e `PUT /api/utenti/:id/password` (solo admin) elencano e reimpostano gli account, `PUT /api/password-master` (solo admin) cambia la password richiesta per gli sconti. Una nuova password deve avere almeno 10 caratteri e non può essere una di quelle predefinite.
+- La pagina **Impostazioni** gestisce le credenziali: `POST /api/password` cambia la propria (serve la password attuale) e `PUT /api/profilo` la propria email. Solo admin: `GET /api/utenti` elenca gli account, `POST /api/utenti` ne crea uno (username, nome, ruolo, email) generando una password casuale che arriva per email, `PUT /api/utenti/:id` modifica nome/ruolo/email, `POST /api/utenti/:id/reimposta` genera e invia una nuova password casuale, `PUT /api/utenti/:id/password` ne imposta una scelta dall'admin (pensata per gli account senza email), `PUT /api/password-master` cambia la password degli sconti. Una nuova password deve avere almeno 10 caratteri e non può essere una di quelle predefinite.
+- Il recupero password è **pubblico**, registrato prima del middleware di autenticazione: `POST /api/recupera-password` accetta username o email e risponde sempre allo stesso modo (non rivela chi è registrato), `GET /api/recupera-password/:token` valida il collegamento, `POST /api/reimposta-password` salva la nuova password, consuma il token e chiude le sessioni di quell'account. I token sono monouso, scadono dopo 30 minuti e stanno nella tabella `reimpostazioni`.
 - Gli errori di credenziali rispondono **403**, non 401: l'interceptor axios del frontend chiude la sessione su qualunque 401, quindi un 401 butterebbe fuori l'operatore per un semplice errore di digitazione.
 - Se si entra con una password predefinita, `POST /api/login` risponde con `passwordDaCambiare: true` e il gestionale mostra un avviso in cima a ogni pagina finché la password non viene cambiata.
 - CORS limitato a `http://localhost:3000`, `http://localhost:5173` e agli host extra indicati in `CORS_ORIGINS` (separati da virgola): in produzione il frontend è servito dallo stesso dominio, quindi non serve alcun header CORS.
 
 Gli utenti e la password master di default sono creati dal seed in `database.js`: `admin`/`admin123`, `dipendente`/`dip123` e master `master2026`. **Cambiali dalla pagina Impostazioni**: sono comparsi nelle versioni precedenti del repository e devono considerarsi compromessi.
+
+## Email transazionali
+
+Le email (credenziali di benvenuto e collegamento di recupero password) partono dall'API di **Brevo** tramite `email.js`, senza dipendenze aggiuntive.
+
+| Variabile d'ambiente | Serve per inviare | Valore |
+|---|---|---|
+| `BREVO_API_KEY` | sì | chiave API v3 di Brevo |
+| `EMAIL_DA` | sì | mittente, es. `Arda Centro Estetico <info@ardacentrolistico.it>`; l'indirizzo va verificato su Brevo |
+| `PUBLIC_URL` | no | base dei collegamenti inviati; default `https://www.ardacentrolistico.it` |
+| `BREVO_API_URL` | no | solo per collaudi contro un server fittizio |
+
+Senza `BREVO_API_KEY` e `EMAIL_DA` l'invio non è configurato: il recupero password risponde **503** con un messaggio esplicito e la creazione di un account viene rifiutata, così non si creano utenti la cui password non può arrivare a nessuno. Le password generate non vengono mai scritte nei log.
+
+Su Railway queste variabili vanno aggiunte dalla dashboard del servizio. Se in futuro si esegue `railway config apply`, vanno dichiarate anche in `.railway/railway.ts`, altrimenti l'IaC le rimuove (stesso comportamento già visto con `DATABASE_URL`).

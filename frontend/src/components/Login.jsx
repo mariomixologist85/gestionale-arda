@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import axios from 'axios'
 import { Form, Button, Card, Alert } from 'react-bootstrap'
-import { FaLock, FaUser, FaInstagram, FaWhatsapp, FaStar } from 'react-icons/fa'
+import { FaLock, FaUser, FaInstagram, FaWhatsapp, FaStar, FaEnvelope, FaArrowLeft } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
 
 function Login({ onLogin }) {
@@ -9,6 +9,9 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [recupero, setRecupero] = useState(false)
+  const [identificativo, setIdentificativo] = useState('')
+  const [esitoRecupero, setEsitoRecupero] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -27,6 +30,48 @@ function Login({ onLogin }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleRecupero = async (e) => {
+    e.preventDefault()
+    setEsitoRecupero(null)
+    setLoading(true)
+
+    try {
+      const res = await axios.post(`${API_BASE_URL}/api/recupera-password`, { identificativo })
+      setEsitoRecupero({
+        tipo: 'success',
+        testo: res.data.messaggio || 'Se l\'account esiste, riceverai un collegamento per scegliere una nuova password'
+      })
+      setIdentificativo('')
+    } catch (err) {
+      setEsitoRecupero({ tipo: 'danger', testo: err.response?.data?.error || 'Non riesco a inviare il collegamento' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const apriRecupero = () => {
+    setError('')
+    setEsitoRecupero(null)
+    setRecupero(true)
+  }
+
+  const chiudiRecupero = () => {
+    setEsitoRecupero(null)
+    setIdentificativo('')
+    setRecupero(false)
+  }
+
+  const stileBottonePrincipale = {
+    width: '100%',
+    padding: '0.75rem',
+    borderRadius: '8px',
+    fontWeight: '600',
+    fontSize: '1rem',
+    background: '#C9A961',
+    border: 'none',
+    color: '#2C1810'
   }
 
   return (
@@ -83,55 +128,85 @@ function Login({ onLogin }) {
             </Alert>
           )}
 
-          <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label style={{ fontWeight: '500' }}>
-                <FaUser className="me-2" />
-                Username
-              </Form.Label>
-              <Form.Control
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Inserisci username"
-                required
-                style={{ borderRadius: '8px', padding: '0.75rem' }}
-              />
-            </Form.Group>
+          {recupero ? (
+            <>
+              {esitoRecupero && (
+                <Alert variant={esitoRecupero.tipo} style={{ borderRadius: '8px' }}>
+                  {esitoRecupero.testo}
+                </Alert>
+              )}
+              <Form onSubmit={handleRecupero}>
+                <Form.Group className="mb-4">
+                  <Form.Label style={{ fontWeight: '500' }}>
+                    <FaEnvelope className="me-2" />
+                    Username o email dell'account
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={identificativo}
+                    onChange={(e) => setIdentificativo(e.target.value)}
+                    placeholder="admin oppure nome@esempio.it"
+                    required
+                    style={{ borderRadius: '8px', padding: '0.75rem' }}
+                  />
+                  <Form.Text className="text-muted">
+                    Il collegamento arriva all'email associata all'account, vale 30 minuti e si usa una volta sola.
+                  </Form.Text>
+                </Form.Group>
 
-            <Form.Group className="mb-4">
-              <Form.Label style={{ fontWeight: '500' }}>
-                <FaLock className="me-2" />
-                Password
-              </Form.Label>
-              <Form.Control
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Inserisci password"
-                required
-                style={{ borderRadius: '8px', padding: '0.75rem' }}
-              />
-            </Form.Group>
+                <Button variant="primary" type="submit" disabled={loading} style={stileBottonePrincipale}>
+                  {loading ? 'Invio in corso...' : 'Invia il collegamento'}
+                </Button>
+                <Button variant="link" type="button" className="w-100 mt-2" onClick={chiudiRecupero}>
+                  <FaArrowLeft className="me-2" />Torna al login
+                </Button>
+              </Form>
+            </>
+          ) : (
+            <>
+              <Form onSubmit={handleSubmit}>
+                <Form.Group className="mb-3">
+                  <Form.Label style={{ fontWeight: '500' }}>
+                    <FaUser className="me-2" />
+                    Username
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Inserisci username"
+                    required
+                    style={{ borderRadius: '8px', padding: '0.75rem' }}
+                  />
+                </Form.Group>
 
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                fontWeight: '600',
-                fontSize: '1rem',
-                background: '#C9A961',
-                border: 'none',
-                color: '#2C1810'
-              }}
-            >
-              {loading ? 'Accesso in corso...' : 'Accedi'}
-            </Button>
-          </Form>
+                <Form.Group className="mb-3">
+                  <Form.Label style={{ fontWeight: '500' }}>
+                    <FaLock className="me-2" />
+                    Password
+                  </Form.Label>
+                  <Form.Control
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Inserisci password"
+                    required
+                    style={{ borderRadius: '8px', padding: '0.75rem' }}
+                  />
+                </Form.Group>
+
+                <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+                  <button type="button" className="link-credenziali" onClick={apriRecupero}>
+                    Password dimenticata?
+                  </button>
+                </div>
+
+                <Button variant="primary" type="submit" disabled={loading} style={stileBottonePrincipale}>
+                  {loading ? 'Accesso in corso...' : 'Accedi'}
+                </Button>
+              </Form>
+            </>
+          )}
 
           <div style={{
             marginTop: '2rem',

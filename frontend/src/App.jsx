@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
+import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
 import { FaHome, FaCalendarAlt, FaUsers, FaClipboardList, FaConciergeBell, FaSignOutAlt, FaWhatsapp, FaBars, FaTimes, FaUserNurse, FaKey } from 'react-icons/fa'
 import { Button, Alert } from 'react-bootstrap'
 import { API_BASE_URL } from './config.js'
 import Login from './components/Login'
+import ReimpostaPassword from './components/ReimpostaPassword'
 import Dashboard from './components/Dashboard'
 import Appuntamenti from './components/Appuntamenti'
 import Clienti from './components/Clienti'
@@ -18,6 +19,7 @@ function App() {
   const [utente, setUtente] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
+  const { pathname } = useLocation()
 
   useEffect(() => {
     const utenteSalvato = localStorage.getItem('utente')
@@ -31,9 +33,9 @@ function App() {
     localStorage.setItem('utente', JSON.stringify(utenteData))
   }
 
-  // Dopo il cambio password l'avviso sulle credenziali predefinite non serve più
-  const handlePasswordCambiata = () => {
-    const aggiornato = { ...utente, passwordDaCambiare: false }
+  // Dopo un cambio password o email i dati salvati nel browser vanno allineati
+  const aggiornaUtenteLocale = (patch) => {
+    const aggiornato = { ...utente, ...patch }
     setUtente(aggiornato)
     localStorage.setItem('utente', JSON.stringify(aggiornato))
   }
@@ -56,6 +58,12 @@ function App() {
 
   const closeSidebar = () => {
     setSidebarOpen(false)
+  }
+
+  // Il collegamento arrivato via email deve funzionare senza sessione, ma anche
+  // quando chi lo apre ha già un accesso attivo in questo browser
+  if (pathname === '/reimposta-password') {
+    return <ReimpostaPassword />
   }
 
   if (!utente) {
@@ -171,7 +179,7 @@ function App() {
           <Route path="/operatori" element={<Operatori />} />
           <Route path="/trattamenti" element={<Trattamenti utente={utente} />} />
           <Route path="/whatsapp" element={<WhatsApp />} />
-          <Route path="/impostazioni" element={<Impostazioni utente={utente} onPasswordCambiata={handlePasswordCambiata} />} />
+          <Route path="/impostazioni" element={<Impostazioni utente={utente} onUtenteAggiornato={aggiornaUtenteLocale} />} />
         </Routes>
       </main>
     </div>
