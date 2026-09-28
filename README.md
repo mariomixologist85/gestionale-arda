@@ -98,17 +98,32 @@ Gli utenti e la password master di default sono creati dal seed in `database.js`
 
 ## Email transazionali
 
-Le email (credenziali di benvenuto e collegamento di recupero password) partono da `email.js` usando la `fetch` di Node, senza dipendenze aggiuntive. Il provider si sceglie da quale chiave è presente tra le variabili: se ci sono entrambe vince Resend.
+Le email (credenziali di benvenuto e collegamento di recupero password) partono da `email.js`. Il provider si sceglie da quale variabile è presente, nell'ordine **SMTP → Resend → Brevo**: Resend e Brevo usano la `fetch` di Node, SMTP usa `nodemailer`.
 
 | Variabile d'ambiente | Serve per inviare | Valore |
 |---|---|---|
+| `SMTP_USER` + `SMTP_PASS` | sì, con SMTP | casella e password; per Gmail è l'**app password** |
+| `SMTP_HOST` | no | default `smtp.gmail.com` |
+| `SMTP_PORT` | no | default `465` (SSL); con `587` parte in STARTTLS |
+| `SMTP_SECURE` | no | `true`/`false` per forzare, altrimenti deriva dalla porta |
 | `RESEND_API_KEY` | sì, con Resend | chiave API di [resend.com](https://resend.com) (`re_…`) |
-| `BREVO_API_KEY` | sì, con Brevo | chiave API v3 di [brevo.com](https://www.brevo.com) |
-| `EMAIL_DA` | sì | mittente, es. `Arda Centro Estetico <info@ardacentrolistico.it>` |
+| `BREVO_API_KEY` | sì, con Brevo | chiave API v3 di [brevo.com](https://www.brevo.com) (`xkeysib-…`) |
+| `EMAIL_DA` | sì | mittente, es. `Arda Centro Estetico <nome@gmail.com>` |
 | `PUBLIC_URL` | no | base dei collegamenti inviati; default `https://www.ardacentrolistico.it` |
 | `RESEND_API_URL` / `BREVO_API_URL` | no | solo per collaudi contro un server fittizio |
 
-**Attenzione al mittente con Resend:** senza un dominio verificato (record SPF/DKIM sul DNS di `ardacentrolistico.it`) Resend spedisce solo all'indirizzo del proprio account, quindi le credenziali non arriverebbero ai dipendenti. Verificato il dominio, si può scrivere a chiunque. Con **Brevo** invece basta verificare il singolo indirizzo mittente cliccando su un'email di conferma, senza toccare il DNS: per questo è la strada più rapida.
+### Gmail con app password
+
+1. sulla casella Gmail attiva la **verifica in due passaggi**: senza quella le app password non si possono creare
+2. apri <https://myaccount.google.com/apppasswords>, creane una (es. "Gestionale Arda") e copia i 16 caratteri
+3. su Railway aggiungi `SMTP_USER` = l'indirizzo Gmail completo, `SMTP_PASS` = l'app password senza spazi, `EMAIL_DA` = `Arda Centro Estetico <lo-stesso-indirizzo@gmail.com>`
+4. riavvia il servizio
+
+Con Gmail il mittente **deve coincidere con `SMTP_USER`**: un `From` diverso viene rifiutato o riscritto. Le email arriveranno quindi dalla casella Gmail e non da `info@ardacentrolistico.it`; per usare il dominio del centro come mittente servono Resend o Brevo con il dominio verificato. Limite indicativo di Gmail: ~500 destinatari al giorno, 2.000 con Google Workspace.
+
+### Note sugli altri provider
+
+**Resend** senza un dominio verificato sul DNS (record SPF/DKIM) spedisce solo all'indirizzo del proprio account: le credenziali dei dipendenti non arriverebbero. **Brevo** chiede invece solo la verifica dell'indirizzo mittente con un'email di conferma, senza toccare il DNS.
 
 Senza una chiave provider e senza `EMAIL_DA` l'invio non è configurato: il recupero password risponde **503** con un messaggio esplicito e la creazione di un account viene rifiutata, così non si creano utenti la cui password non può arrivare a nessuno. Le password generate non vengono mai scritte nei log.
 

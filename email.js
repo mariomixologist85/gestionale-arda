@@ -1,15 +1,21 @@
 // Email transazionali (credenziali di benvenuto e link di reimpostazione password).
-// Nessuna dipendenza aggiuntiva: usa la fetch di Node.
 //
-// Provider supportati, si sceglie da quale chiave è presente tra le variabili:
-//   RESEND_API_KEY  Resend (https://resend.com) — senza dominio verificato può scrivere
-//                   solo all'indirizzo del proprio account Resend
-//   BREVO_API_KEY   Brevo (https://www.brevo.com) — basta verificare l'indirizzo mittente
+// Provider supportati; vince il primo configurato, nell'ordine SMTP → Resend → Brevo:
+//   SMTP_USER + SMTP_PASS   qualunque server SMTP, di default Gmail con app password
+//   RESEND_API_KEY          Resend (https://resend.com) — senza dominio verificato sul
+//                           DNS scrive solo all'indirizzo del proprio account
+//   BREVO_API_KEY           Brevo (https://www.brevo.com) — basta verificare l'indirizzo mittente
 //
-// Comuni a entrambi:
-//   EMAIL_DA        mittente, es. "Arda Centro Estetico <info@ardacentrolistico.it>"
+// Variabili comuni:
+//   EMAIL_DA        mittente, es. "Arda Centro Estetico <nome@gmail.com>"; con Gmail deve
+//                   essere lo stesso indirizzo di SMTP_USER, altrimenti l'invio viene rifiutato
 //   PUBLIC_URL      base dei collegamenti inviati (default: il dominio di produzione)
-//   BREVO_API_URL / RESEND_API_URL   solo per collaudi contro un server fittizio
+//   SMTP_HOST       default smtp.gmail.com
+//   SMTP_PORT       default 465 (SSL); con 587 parte in STARTTLS
+//   SMTP_SECURE     "true"/"false" per forzare, altrimenti deriva dalla porta
+//   RESEND_API_URL / BREVO_API_URL   solo per collaudi contro un server fittizio
+
+const nodemailer = require('nodemailer');
 
 const ENDPOINT_BREVO = process.env.BREVO_API_URL || 'https://api.brevo.com/v3/smtp/email';
 const ENDPOINT_RESEND = process.env.RESEND_API_URL || 'https://api.resend.com/emails';
@@ -27,12 +33,13 @@ function mittente() {
 }
 
 function provider() {
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) return 'smtp';
   if (process.env.RESEND_API_KEY) return 'resend';
   if (process.env.BREVO_API_KEY) return 'brevo';
   return null;
 }
 
-// L'invio è configurato solo con una chiave provider e un mittente
+// L'invio è configurato solo con un provider e un mittente
 function configurato() {
   return Boolean(provider() && (process.env.EMAIL_DA || '').trim());
 }
@@ -119,14 +126,49 @@ async function inviaConResend({ a, oggetto, testo, html }) {
   return risposta.json();
 }
 
+// Il trasporto SMTP viene creato alla prima email e riusato per le successive
+let trasportoSmtp = null;
+
+function smtp() {
+  if (!trasportoSmtp) {
+    const porta = Number(process.env.SMTP_PORT || 465);
+    trasportoSmtp = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: porta,
+      secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : porta === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
+  }
+  return trasportoSmtp;
+}
+
+async function inviaConSmtp({ a, nome, oggetto, testo, html }) {
+  const { name, email: indirizzo } = mittente();
+  try {
+    return await smtp().sendMail({
+      from: name ? `${name} <${indirizzo}>` : indirizzo,
+      to: nome ? `${nome} <${a}>` : a,
+      subject: oggetto,
+      text: testo,
+      html
+    });
+  } catch (errore) {
+    // Il messaggio resta corto: nodemailer non ci mette la password, ma non serve riversarlo tutto nei log
+    throw new Error(`Invio email fallito con SMTP: ${errore.message.slice(0, 200)}`);
+  }
+}
+
 async function inviaEmail(messaggio) {
   if (!configurato()) {
-    throw new Error('Invio email non configurato: servono EMAIL_DA e una chiave tra RESEND_API_KEY e BREVO_API_KEY');
+    throw new Error('Invio email non configurato: servono EMAIL_DA e una tra SMTP_USER/SMTP_PASS, RESEND_API_KEY, BREVO_API_KEY');
   }
   if (!messaggio.a) {
     throw new Error('Indirizzo email del destinatario mancante');
   }
-  return provider() === 'resend' ? inviaConResend(messaggio) : inviaConBrevo(messaggio);
+
+  const scelto = provider();
+  if (scelto === 'smtp') return inviaConSmtp(messaggio);
+  return scelto === 'resend' ? inviaConResend(messaggio) : inviaConBrevo(messaggio);
 }
 
 // Credenziali di primo accesso per un account appena creato
