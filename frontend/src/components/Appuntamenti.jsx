@@ -3,6 +3,7 @@ import axios from 'axios'
 import { Modal, Button, Form } from 'react-bootstrap'
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
+import SelezioneCliente from './SelezioneCliente'
 
 function Appuntamenti({ utente }) {
   const [appuntamenti, setAppuntamenti] = useState([])
@@ -97,21 +98,19 @@ function Appuntamenti({ utente }) {
     setEditingApp(null)
   }
 
+  const handleSelectCliente = (cliente) => {
+    setFormData(prev => ({
+      ...prev,
+      clienteId: cliente ? cliente.id : '',
+      clienteNome: cliente ? `${cliente.nome} ${cliente.cognome}` : '',
+      clienteTelefono: cliente ? cliente.telefono || '' : ''
+    }))
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
 
-    if (name === 'clienteId') {
-      const cliente = clienti.find(c => c.id === value)
-      if (cliente) {
-        setFormData(prev => ({
-          ...prev,
-          clienteId: value,
-          clienteNome: `${cliente.nome} ${cliente.cognome}`,
-          clienteTelefono: cliente.telefono || ''
-        }))
-      }
-    }
     if (name === 'servizioId') {
       const servizio = servizi.find(s => s.id === value)
       if (servizio) {
@@ -137,6 +136,10 @@ function Appuntamenti({ utente }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!formData.clienteId) {
+      alert('Seleziona il cliente cercandolo nell\'elenco')
+      return
+    }
     try {
       if (editingApp) {
         await axios.put(`${API_BASE_URL}/api/appuntamenti/${editingApp.id}`, formData)
@@ -297,17 +300,11 @@ function Appuntamenti({ utente }) {
           <Modal.Body>
             <Form.Group className="mb-3">
               <Form.Label>Cliente *</Form.Label>
-              <Form.Select
-                name="clienteId"
+              <SelezioneCliente
+                clienti={clienti}
                 value={formData.clienteId}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Seleziona cliente...</option>
-                {clienti.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome} {c.cognome}</option>
-                ))}
-              </Form.Select>
+                onSelect={handleSelectCliente}
+              />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Servizio *</Form.Label>

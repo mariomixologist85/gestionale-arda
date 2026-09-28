@@ -423,6 +423,96 @@ body {
   font-size: 0.95rem;
 }
 
+/* Ricerca cliente (combobox con elenco filtrabile) */
+.ricerca-cliente {
+  position: relative;
+}
+
+.ricerca-cliente-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ricerca-cliente-input .form-control {
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
+}
+
+.ricerca-cliente-icon {
+  position: absolute;
+  left: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.ricerca-cliente-clear {
+  position: absolute;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.35rem;
+  line-height: 1;
+  border-radius: 50%;
+}
+
+.ricerca-cliente-clear:hover {
+  color: var(--text-primary);
+  background: rgba(201, 169, 97, 0.15);
+}
+
+.ricerca-cliente-lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1060;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.ricerca-cliente-voce {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ricerca-cliente-voce.evidenziata {
+  background: rgba(201, 169, 97, 0.15);
+}
+
+.ricerca-cliente-voce.selezionata {
+  font-weight: 600;
+  color: var(--primary-dark);
+}
+
+.voce-telefono {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.ricerca-cliente-vuoto,
+.ricerca-cliente-altro {
+  padding: 0.6rem 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
