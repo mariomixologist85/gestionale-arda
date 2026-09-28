@@ -12,7 +12,7 @@ gestionale-arda/
 ├── database.js          # Accesso dati: PostgreSQL se c'è DATABASE_URL, altrimenti JSON locale
 ├── whatsapp.js          # Generazione link wa.me per promemoria e messaggi
 ├── package.json         # Dipendenze backend + script di build del frontend
-├── railway.json         # Build/start command per Railway
+├── .railway/railway.ts  # Infrastruttura Railway (IaC): repo, build, start, DATABASE_URL
 ├── data/db.json         # Database locale (generato automaticamente, non versionato)
 └── frontend/
     ├── index.html
@@ -21,6 +21,7 @@ gestionale-arda/
     └── src/
         ├── App.jsx      # Layout, sidebar, routing
         ├── config.js    # API_BASE_URL (vuoto in produzione → stesse origin)
+        ├── utils/       # ricerca.js (confronto testi), apriWhatsApp.js (apertura scheda)
         └── components/  # Dashboard, Appuntamenti, Clienti, Servizi, Trattamenti,
                          # Operatori, Login, WhatsApp, SelezioneCliente (ricerca cliente riutilizzata)
 ```
@@ -49,9 +50,9 @@ npm start       # Express serve frontend/dist su http://localhost:3001
 
 ## Deploy su Railway
 
-1. Un solo servizio, collegato al repository GitHub.
-2. Aggiungi il plugin **PostgreSQL** e collega la variabile `DATABASE_URL` al servizio.
-3. `railway.json` esegue `npm install && npm --prefix frontend install && npm --prefix frontend run build` in build e `npm start` all'avvio.
+1. Un solo servizio, collegato al repository GitHub: i push su `main` deployano da soli.
+2. Il servizio **Postgres** dello stesso progetto fornisce `DATABASE_URL`.
+3. `.railway/railway.ts` (Infrastructure as Code) dichiara repo e branch, `buildCommand` (`npm install && npm --prefix frontend install && npm --prefix frontend run build`), `startCommand` (`npm start`), restart `ON_FAILURE` con 10 tentativi e `DATABASE_URL = ${{Postgres.DATABASE_URL}}`. Senza quest'ultima dichiarazione `railway config apply` cancellerebbe la variabile. Le modifiche si applicano con `railway config apply`.
 4. Le tabelle vengono create automaticamente al primo avvio (`CREATE TABLE IF NOT EXISTS`) con operatori, utenti e password master di default.
 
 Se `DATABASE_URL` manca o la connessione fallisce, il server ripiega sul JSON locale: su Railway il filesystem è **effimero**, quindi i dati andrebbero persi a ogni redeploy. Controlla nei log la riga `✅ Connesso a PostgreSQL`.
