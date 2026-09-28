@@ -98,15 +98,18 @@ Gli utenti e la password master di default sono creati dal seed in `database.js`
 
 ## Email transazionali
 
-Le email (credenziali di benvenuto e collegamento di recupero password) partono dall'API di **Brevo** tramite `email.js`, senza dipendenze aggiuntive.
+Le email (credenziali di benvenuto e collegamento di recupero password) partono da `email.js` usando la `fetch` di Node, senza dipendenze aggiuntive. Il provider si sceglie da quale chiave è presente tra le variabili: se ci sono entrambe vince Resend.
 
 | Variabile d'ambiente | Serve per inviare | Valore |
 |---|---|---|
-| `BREVO_API_KEY` | sì | chiave API v3 di Brevo |
-| `EMAIL_DA` | sì | mittente, es. `Arda Centro Estetico <info@ardacentrolistico.it>`; l'indirizzo va verificato su Brevo |
+| `RESEND_API_KEY` | sì, con Resend | chiave API di [resend.com](https://resend.com) (`re_…`) |
+| `BREVO_API_KEY` | sì, con Brevo | chiave API v3 di [brevo.com](https://www.brevo.com) |
+| `EMAIL_DA` | sì | mittente, es. `Arda Centro Estetico <info@ardacentrolistico.it>` |
 | `PUBLIC_URL` | no | base dei collegamenti inviati; default `https://www.ardacentrolistico.it` |
-| `BREVO_API_URL` | no | solo per collaudi contro un server fittizio |
+| `RESEND_API_URL` / `BREVO_API_URL` | no | solo per collaudi contro un server fittizio |
 
-Senza `BREVO_API_KEY` e `EMAIL_DA` l'invio non è configurato: il recupero password risponde **503** con un messaggio esplicito e la creazione di un account viene rifiutata, così non si creano utenti la cui password non può arrivare a nessuno. Le password generate non vengono mai scritte nei log.
+**Attenzione al mittente con Resend:** senza un dominio verificato (record SPF/DKIM sul DNS di `ardacentrolistico.it`) Resend spedisce solo all'indirizzo del proprio account, quindi le credenziali non arriverebbero ai dipendenti. Verificato il dominio, si può scrivere a chiunque. Con **Brevo** invece basta verificare il singolo indirizzo mittente cliccando su un'email di conferma, senza toccare il DNS: per questo è la strada più rapida.
+
+Senza una chiave provider e senza `EMAIL_DA` l'invio non è configurato: il recupero password risponde **503** con un messaggio esplicito e la creazione di un account viene rifiutata, così non si creano utenti la cui password non può arrivare a nessuno. Le password generate non vengono mai scritte nei log.
 
 Su Railway queste variabili vanno aggiunte dalla dashboard del servizio. Se in futuro si esegue `railway config apply`, vanno dichiarate anche in `.railway/railway.ts`, altrimenti l'IaC le rimuove (stesso comportamento già visto con `DATABASE_URL`).

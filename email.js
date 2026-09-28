@@ -1,13 +1,18 @@
-// Email transazionali (credenziali di benvenuto e link di reimpostazione password)
-// tramite API Brevo. Nessuna dipendenza aggiuntiva: usa la fetch di Node.
+// Email transazionali (credenziali di benvenuto e link di reimpostazione password).
+// Nessuna dipendenza aggiuntiva: usa la fetch di Node.
 //
-// Variabili d'ambiente:
-//   BREVO_API_KEY  chiave API v3 di Brevo (obbligatoria per inviare)
-//   EMAIL_DA       mittente, es. "Arda Centro Estetico <info@ardacentrolistico.it>"
-//   PUBLIC_URL     base dei link inviati (default: il dominio di produzione)
-//   BREVO_API_URL  solo per collaudi contro un server fittizio
+// Provider supportati, si sceglie da quale chiave è presente tra le variabili:
+//   RESEND_API_KEY  Resend (https://resend.com) — senza dominio verificato può scrivere
+//                   solo all'indirizzo del proprio account Resend
+//   BREVO_API_KEY   Brevo (https://www.brevo.com) — basta verificare l'indirizzo mittente
+//
+// Comuni a entrambi:
+//   EMAIL_DA        mittente, es. "Arda Centro Estetico <info@ardacentrolistico.it>"
+//   PUBLIC_URL      base dei collegamenti inviati (default: il dominio di produzione)
+//   BREVO_API_URL / RESEND_API_URL   solo per collaudi contro un server fittizio
 
-const ENDPOINT = process.env.BREVO_API_URL || 'https://api.brevo.com/v3/smtp/email';
+const ENDPOINT_BREVO = process.env.BREVO_API_URL || 'https://api.brevo.com/v3/smtp/email';
+const ENDPOINT_RESEND = process.env.RESEND_API_URL || 'https://api.resend.com/emails';
 const NOME_APP = 'Arda - Centro Estetico Olistico';
 
 function urlPubblica() {
@@ -21,9 +26,15 @@ function mittente() {
   return { name: NOME_APP, email: grezzo };
 }
 
-// L'invio è configurato solo con chiave e mittente: altrimenti si risponde con un errore chiaro
+function provider() {
+  if (process.env.RESEND_API_KEY) return 'resend';
+  if (process.env.BREVO_API_KEY) return 'brevo';
+  return null;
+}
+
+// L'invio è configurato solo con una chiave provider e un mittente
 function configurato() {
-  return Boolean(process.env.BREVO_API_KEY && (process.env.EMAIL_DA || '').trim());
+  return Boolean(provider() && (process.env.EMAIL_DA || '').trim());
 }
 
 function escape(testo) {
@@ -62,15 +73,14 @@ function bottone(url, etichetta) {
   <p style="margin:0;color:#6B5B4F;font-size:12px;word-break:break-all;">Se il bottone non funziona copia questo indirizzo nel browser:<br>${escape(url)}</p>`;
 }
 
-async function inviaEmail({ a, nome, oggetto, testo, html }) {
-  if (!configurato()) {
-    throw new Error('Invio email non configurato: servono BREVO_API_KEY ed EMAIL_DA tra le variabili del servizio');
-  }
-  if (!a) {
-    throw new Error('Indirizzo email del destinatario mancante');
-  }
+// Il corpo dell'errore del provider può essere lungo: ne teniamo un estratto, mai la chiave
+async function erroreInvio(risposta, nomeProvider) {
+  const dettaglio = (await risposta.text()).slice(0, 300);
+  return new Error(`Invio email fallito con ${nomeProvider} (${risposta.status}): ${dettaglio}`);
+}
 
-  const risposta = await fetch(ENDPOINT, {
+async function inviaConBrevo({ a, nome, oggetto, testo, html }) {
+  const risposta = await fetch(ENDPOINT_BREVO, {
     method: 'POST',
     headers: {
       'api-key': process.env.BREVO_API_KEY,
@@ -85,13 +95,38 @@ async function inviaEmail({ a, nome, oggetto, testo, html }) {
       textContent: testo
     })
   });
-
-  if (!risposta.ok) {
-    // Il corpo della risposta di Brevo non contiene la chiave API, ma evitiamo di riversarlo nei log per intero
-    const dettaglio = (await risposta.text()).slice(0, 300);
-    throw new Error(`Invio email fallito (${risposta.status}): ${dettaglio}`);
-  }
+  if (!risposta.ok) throw await erroreInvio(risposta, 'Brevo');
   return risposta.json();
+}
+
+async function inviaConResend({ a, oggetto, testo, html }) {
+  const { name, email: indirizzo } = mittente();
+  const risposta = await fetch(ENDPOINT_RESEND, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: name ? `${name} <${indirizzo}>` : indirizzo,
+      to: [a],
+      subject: oggetto,
+      html,
+      text: testo
+    })
+  });
+  if (!risposta.ok) throw await erroreInvio(risposta, 'Resend');
+  return risposta.json();
+}
+
+async function inviaEmail(messaggio) {
+  if (!configurato()) {
+    throw new Error('Invio email non configurato: servono EMAIL_DA e una chiave tra RESEND_API_KEY e BREVO_API_KEY');
+  }
+  if (!messaggio.a) {
+    throw new Error('Indirizzo email del destinatario mancante');
+  }
+  return provider() === 'resend' ? inviaConResend(messaggio) : inviaConBrevo(messaggio);
 }
 
 // Credenziali di primo accesso per un account appena creato
@@ -135,4 +170,4 @@ async function inviaReimpostazione({ email, nome, token, minuti }) {
   });
 }
 
-module.exports = { configurato, inviaEmail, inviaCredenziali, inviaReimpostazione, urlPubblica };
+module.exports = { configurato, provider, inviaEmail, inviaCredenziali, inviaReimpostazione, urlPubblica };
