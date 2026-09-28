@@ -101,6 +101,26 @@ app.post('/api/login', async (req, res) => {
 });
 
 // ===== RECUPERO PASSWORD =====
+// Crea un token monouso e spedisce il collegamento: lo usano sia la richiesta pubblica
+// sia l'admin che lo invia a un account preciso
+async function inviaLinkReimpostazione(utente) {
+  const token = nuovoToken();
+  const creatoIl = new Date();
+  await db.creaReimpostazione({
+    token,
+    utenteId: utente.id,
+    creatoIl: creatoIl.toISOString(),
+    scadenza: new Date(creatoIl.getTime() + DURATA_RESET_MINUTI * 60 * 1000).toISOString()
+  });
+  await email.inviaReimpostazione({
+    email: utente.email,
+    nome: utente.nome,
+    token,
+    minuti: DURATA_RESET_MINUTI
+  });
+  return token;
+}
+
 // Rotte pubbliche: chi ha dimenticato la password non ha un token di sessione
 app.post('/api/recupera-password', async (req, res) => {
   const identificativo = (req.body.identificativo || '').trim();
@@ -122,22 +142,8 @@ app.post('/api/recupera-password', async (req, res) => {
     return res.json(risposta);
   }
 
-  const token = nuovoToken();
-  const creatoIl = new Date();
-  await db.creaReimpostazione({
-    token,
-    utenteId: utente.id,
-    creatoIl: creatoIl.toISOString(),
-    scadenza: new Date(creatoIl.getTime() + DURATA_RESET_MINUTI * 60 * 1000).toISOString()
-  });
-
   try {
-    await email.inviaReimpostazione({
-      email: utente.email,
-      nome: utente.nome,
-      token,
-      minuti: DURATA_RESET_MINUTI
-    });
+    await inviaLinkReimpostazione(utente);
   } catch (errore) {
     console.error('Invio email di reimpostazione fallito:', errore.message);
     return res.status(502).json({ error: 'Non riesco a inviare l\'email in questo momento: riprova più tardi' });
@@ -340,6 +346,29 @@ app.post('/api/utenti/:id/reimposta', async (req, res) => {
   await db.aggiornaUtente(utente.id, { password: hashPassword(password), passwordDaCambiare: true });
   const sessioniChiuse = await db.eliminaSessioniUtente(utente.id);
   res.json({ success: true, inviataA: utente.email, sessioniChiuse });
+});
+
+// L'admin manda il collegamento di reimpostazione a un account preciso: l'utente sceglie
+// la propria password e nessuno, admin compreso, la viene a conoscere
+app.post('/api/utenti/:id/link-reimpostazione', async (req, res) => {
+  if (!soloAdmin(req, res)) return;
+
+  const utente = await db.getUtente(req.params.id);
+  if (!utente) return res.status(404).json({ error: 'Utente non trovato' });
+  if (!emailValida(utente.email)) {
+    return res.status(400).json({ error: 'L\'account non ha un\'email valida: associane una prima di inviare il collegamento' });
+  }
+  if (!email.configurato()) {
+    return res.status(503).json({ error: 'Invio email non configurato sul server' });
+  }
+
+  try {
+    await inviaLinkReimpostazione(utente);
+  } catch (errore) {
+    console.error('Invio link di reimpostazione fallito:', errore.message);
+    return res.status(502).json({ error: 'Non riesco a inviare l\'email con il collegamento' });
+  }
+  res.json({ success: true, inviataA: utente.email });
 });
 
 // Reimposta con una password scelta dall'admin: serve solo per gli account senza email

@@ -611,6 +611,20 @@ body {
   flex-wrap: wrap;
 }
 
+.opzione-password {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.opzione-password:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.opzione-password p {
+  margin: 0.25rem 0 0 1.5rem;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;

@@ -17,8 +17,7 @@ function Impostazioni({ utente, onUtenteAggiornato }) {
   const [esitoAccount, setEsitoAccount] = useState(null)
   const [accountAperto, setAccountAperto] = useState(null)
   const [esitoModale, setEsitoModale] = useState(null)
-  const [resetManuale, setResetManuale] = useState(null)
-  const [passwordManuale, setPasswordManuale] = useState({ nuovaPassword: '', conferma: '' })
+  const [gestionePassword, setGestionePassword] = useState(null)
   const [master, setMaster] = useState({ passwordAttuale: '', nuovaPassword: '', conferma: '' })
   const [esitoMaster, setEsitoMaster] = useState(null)
 
@@ -110,45 +109,44 @@ function Impostazioni({ utente, onUtenteAggiornato }) {
     }
   }
 
-  const handleReimposta = async (account) => {
-    setEsitoAccount(null)
-    if (!account.email) {
-      // Senza email le credenziali non possono arrivare: le sceglie l'admin e le comunica di persona
-      setPasswordManuale({ nuovaPassword: '', conferma: '' })
-      setEsitoModale(null)
-      setResetManuale(account)
-      return
-    }
-
-    const confermato = window.confirm(
-      `Invio a ${account.email} una nuova password casuale per ${account.username}.\n\n` +
-      'Nessuno la vedrà qui: arriva solo per email e l\'utente dovrà cambiarla al primo accesso.\n' +
-      'Le sue sessioni già aperte verranno chiuse. Continuare?'
-    )
-    if (!confermato) return
-
-    try {
-      const res = await axios.post(`${API_BASE_URL}/api/utenti/${account.id}/reimposta`)
-      setEsitoAccount({ tipo: 'success', testo: `Nuova password inviata a ${res.data.inviataA}. Sessioni chiuse: ${res.data.sessioniChiuse}` })
-      await ricaricaUtenti()
-    } catch (err) {
-      setEsitoAccount({ tipo: 'danger', testo: messaggioErrore(err) })
-    }
+  const apriGestionePassword = (account) => {
+    setEsitoModale(null)
+    setGestionePassword({
+      account,
+      opzione: account.email ? 'link' : 'manuale',
+      nuovaPassword: '',
+      conferma: ''
+    })
   }
 
-  const handleResetManuale = async (e) => {
+  const handleGestionePassword = async (e) => {
     e.preventDefault()
     setEsitoModale(null)
-    if (!corrisponde(passwordManuale)) {
+    const { account, opzione, nuovaPassword, conferma } = gestionePassword
+
+    if (opzione === 'manuale' && nuovaPassword !== conferma) {
       setEsitoModale({ tipo: 'danger', testo: 'La conferma non corrisponde alla nuova password' })
       return
     }
+
     try {
-      await axios.put(`${API_BASE_URL}/api/utenti/${resetManuale.id}/password`, {
-        nuovaPassword: passwordManuale.nuovaPassword
-      })
-      setEsitoAccount({ tipo: 'success', testo: `Password di ${resetManuale.username} aggiornata: comunicala all'interessato` })
-      setResetManuale(null)
+      if (opzione === 'link') {
+        const res = await axios.post(`${API_BASE_URL}/api/utenti/${account.id}/link-reimpostazione`)
+        setEsitoAccount({
+          tipo: 'success',
+          testo: `Collegamento di reimpostazione inviato a ${res.data.inviataA}: sarà ${account.username} a scegliere la nuova password`
+        })
+      } else if (opzione === 'casuale') {
+        const res = await axios.post(`${API_BASE_URL}/api/utenti/${account.id}/reimposta`)
+        setEsitoAccount({
+          tipo: 'success',
+          testo: `Nuova password inviata a ${res.data.inviataA}. Sessioni chiuse: ${res.data.sessioniChiuse}`
+        })
+      } else {
+        await axios.put(`${API_BASE_URL}/api/utenti/${account.id}/password`, { nuovaPassword })
+        setEsitoAccount({ tipo: 'success', testo: `Password di ${account.username} aggiornata: comunicala all'interessato` })
+      }
+      setGestionePassword(null)
       await ricaricaUtenti()
     } catch (err) {
       setEsitoModale({ tipo: 'danger', testo: messaggioErrore(err) })
@@ -303,12 +301,11 @@ function Impostazioni({ utente, onUtenteAggiornato }) {
                         <Button
                           variant="outline-secondary"
                           size="sm"
-                          title={account.email
-                            ? `Invia una nuova password a ${account.email}`
-                            : 'Imposta una password (nessuna email associata)'}
-                          onClick={() => handleReimposta(account)}
+                          title="Invia il link di reimpostazione, una password casuale oppure impostane una tu"
+                          aria-label={`Gestisci la password di ${account.username}`}
+                          onClick={() => apriGestionePassword(account)}
                         >
-                          <FaUnlockAlt /> Reimposta password
+                          <FaKey /> Password
                         </Button>
                       </div>
                     </td>
@@ -318,8 +315,9 @@ function Impostazioni({ utente, onUtenteAggiornato }) {
             </table>
           </div>
           <p className="testo-secondario mb-0">
-            Reimpostare la password chiude le sessioni aperte di quell'account. Chi ha un'email riceve una password
-            casuale che nessun altro conosce, nemmeno tu.
+            Dal bottone Password scegli se mandare il collegamento di reimpostazione (l'utente sceglie da solo e
+            nessuno conosce la sua password), se generare una password casuale spedita per email, oppure se
+            impostarne una tu da comunicare a voce. Le ultime due chiudono le sessioni aperte dell'account.
           </p>
         </div>
       )}
@@ -432,44 +430,93 @@ function Impostazioni({ utente, onUtenteAggiornato }) {
         )}
       </Modal>
 
-      <Modal show={!!resetManuale} onHide={() => setResetManuale(null)}>
+      <Modal show={!!gestionePassword} onHide={() => setGestionePassword(null)}>
         <Modal.Header closeButton>
-          <Modal.Title>Password per {resetManuale?.username}</Modal.Title>
+          <Modal.Title>Password di {gestionePassword?.account.username}</Modal.Title>
         </Modal.Header>
-        {resetManuale && (
-          <Form onSubmit={handleResetManuale}>
+        {gestionePassword && (
+          <Form onSubmit={handleGestionePassword}>
             <Modal.Body>
               {esitoModale && <Alert variant="danger">{esitoModale.testo}</Alert>}
-              <Alert variant="warning">
-                Questo account non ha un'email associata: la password va comunicata di persona e l'utente dovrà
-                cambiarla al primo accesso.
-              </Alert>
-              <Form.Group className="mb-3">
-                <Form.Label>Nuova password *</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={passwordManuale.nuovaPassword}
-                  onChange={(e) => setPasswordManuale({ ...passwordManuale, nuovaPassword: e.target.value })}
-                  autoComplete="new-password"
-                  minLength={LUNGHEZZA_MINIMA}
-                  required
+
+              <div className="opzione-password">
+                <Form.Check
+                  type="radio"
+                  id="opzione-link"
+                  name="opzione-password"
+                  checked={gestionePassword.opzione === 'link'}
+                  disabled={!gestionePassword.account.email}
+                  onChange={() => setGestionePassword({ ...gestionePassword, opzione: 'link' })}
+                  label={<strong>Invia il link di reimpostazione</strong>}
                 />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Conferma nuova password *</Form.Label>
-                <Form.Control
-                  type="password"
-                  value={passwordManuale.conferma}
-                  onChange={(e) => setPasswordManuale({ ...passwordManuale, conferma: e.target.value })}
-                  autoComplete="new-password"
-                  minLength={LUNGHEZZA_MINIMA}
-                  required
+                <p className="testo-secondario">
+                  {gestionePassword.account.email
+                    ? `A ${gestionePassword.account.email} arriva un collegamento valido 30 minuti: l'utente sceglie la nuova password e tu non la conosci mai.`
+                    : 'Serve un\'email associata all\'account: aggiungila con il bottone Modifica.'}
+                </p>
+              </div>
+
+              <div className="opzione-password">
+                <Form.Check
+                  type="radio"
+                  id="opzione-casuale"
+                  name="opzione-password"
+                  checked={gestionePassword.opzione === 'casuale'}
+                  disabled={!gestionePassword.account.email}
+                  onChange={() => setGestionePassword({ ...gestionePassword, opzione: 'casuale' })}
+                  label={<strong>Genera una password casuale e inviala per email</strong>}
                 />
-              </Form.Group>
+                <p className="testo-secondario">
+                  La password arriva solo per email e va cambiata al primo accesso. Le sessioni aperte vengono chiuse.
+                </p>
+              </div>
+
+              <div className="opzione-password">
+                <Form.Check
+                  type="radio"
+                  id="opzione-manuale"
+                  name="opzione-password"
+                  checked={gestionePassword.opzione === 'manuale'}
+                  onChange={() => setGestionePassword({ ...gestionePassword, opzione: 'manuale' })}
+                  label={<strong>Imposta tu una password</strong>}
+                />
+                <p className="testo-secondario">
+                  Da comunicare a voce o con un altro canale; va cambiata al primo accesso. Le sessioni aperte vengono chiuse.
+                </p>
+                {gestionePassword.opzione === 'manuale' && (
+                  <>
+                    <Form.Group className="mb-2 mt-2">
+                      <Form.Label>Nuova password *</Form.Label>
+                      <Form.Control
+                        type="password"
+                        value={gestionePassword.nuovaPassword}
+                        onChange={(e) => setGestionePassword({ ...gestionePassword, nuovaPassword: e.target.value })}
+                        autoComplete="new-password"
+                        minLength={LUNGHEZZA_MINIMA}
+                        required
+                      />
+                      <Form.Text className="text-muted">Almeno {LUNGHEZZA_MINIMA} caratteri</Form.Text>
+                    </Form.Group>
+                    <Form.Group className="mb-0">
+                      <Form.Label>Conferma nuova password *</Form.Label>
+                      <Form.Control
+                        type="password"
+                        value={gestionePassword.conferma}
+                        onChange={(e) => setGestionePassword({ ...gestionePassword, conferma: e.target.value })}
+                        autoComplete="new-password"
+                        minLength={LUNGHEZZA_MINIMA}
+                        required
+                      />
+                    </Form.Group>
+                  </>
+                )}
+              </div>
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="secondary" onClick={() => setResetManuale(null)}>Annulla</Button>
-              <Button variant="primary" type="submit">Imposta password</Button>
+              <Button variant="secondary" onClick={() => setGestionePassword(null)}>Annulla</Button>
+              <Button variant="primary" type="submit">
+                {gestionePassword.opzione === 'manuale' ? 'Imposta password' : 'Invia per email'}
+              </Button>
             </Modal.Footer>
           </Form>
         )}
