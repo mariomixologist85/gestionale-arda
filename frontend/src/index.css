@@ -559,6 +559,31 @@ body {
   color: var(--text-primary);
 }
 
+/* Impostazioni e credenziali */
+.scheda-impostazioni {
+  max-width: 760px;
+}
+
+.testo-secondario {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.ruolo-account {
+  text-transform: capitalize;
+}
+
+.avviso-credenziali {
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(201, 169, 97, 0.4);
+}
+
+.avviso-credenziali a {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;

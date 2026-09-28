@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { FaHome, FaCalendarAlt, FaUsers, FaClipboardList, FaConciergeBell, FaSignOutAlt, FaWhatsapp, FaBars, FaTimes, FaUserNurse } from 'react-icons/fa'
-import { Button } from 'react-bootstrap'
+import { FaHome, FaCalendarAlt, FaUsers, FaClipboardList, FaConciergeBell, FaSignOutAlt, FaWhatsapp, FaBars, FaTimes, FaUserNurse, FaKey } from 'react-icons/fa'
+import { Button, Alert } from 'react-bootstrap'
 import { API_BASE_URL } from './config.js'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
@@ -12,6 +12,7 @@ import Servizi from './components/Servizi'
 import Trattamenti from './components/Trattamenti'
 import Operatori from './components/Operatori'
 import WhatsApp from './components/WhatsApp'
+import Impostazioni from './components/Impostazioni'
 
 function App() {
   const [utente, setUtente] = useState(null)
@@ -28,6 +29,13 @@ function App() {
   const handleLogin = (utenteData) => {
     setUtente(utenteData)
     localStorage.setItem('utente', JSON.stringify(utenteData))
+  }
+
+  // Dopo il cambio password l'avviso sulle credenziali predefinite non serve più
+  const handlePasswordCambiata = () => {
+    const aggiornato = { ...utente, passwordDaCambiare: false }
+    setUtente(aggiornato)
+    localStorage.setItem('utente', JSON.stringify(aggiornato))
   }
 
   const handleLogout = async () => {
@@ -130,6 +138,11 @@ function App() {
               <FaWhatsapp /> WhatsApp
             </NavLink>
           </li>
+          <li className="nav-item">
+            <NavLink to="/impostazioni" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}>
+              <FaKey /> Impostazioni
+            </NavLink>
+          </li>
         </ul>
         <div style={{ padding: '1rem', marginTop: 'auto' }}>
           <Button
@@ -143,6 +156,13 @@ function App() {
       </aside>
 
       <main className="main-content">
+        {utente.passwordDaCambiare && (
+          <Alert variant="warning" className="avviso-credenziali">
+            <strong>Stai entrando con una password predefinita dell'installazione</strong>, già comparsa nel
+            repository: chiunque la conosca può leggere i dati dei clienti.{' '}
+            <NavLink to="/impostazioni">Cambiala adesso</NavLink>.
+          </Alert>
+        )}
         <Routes>
           <Route path="/" element={<Dashboard utente={utente} />} />
           <Route path="/appuntamenti" element={<Appuntamenti utente={utente} />} />
@@ -151,6 +171,7 @@ function App() {
           <Route path="/operatori" element={<Operatori />} />
           <Route path="/trattamenti" element={<Trattamenti utente={utente} />} />
           <Route path="/whatsapp" element={<WhatsApp />} />
+          <Route path="/impostazioni" element={<Impostazioni utente={utente} onPasswordCambiata={handlePasswordCambiata} />} />
         </Routes>
       </main>
     </div>

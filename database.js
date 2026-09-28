@@ -484,6 +484,41 @@ const db = {
     return loadLocalDB().passwordMaster || 'master2026';
   },
 
+  async setPasswordMaster(password) {
+    if (pgClient) {
+      await pgClient.query(
+        "INSERT INTO config (key, value) VALUES ('passwordMaster', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
+        [password]
+      );
+      return true;
+    }
+    const data = loadLocalDB();
+    data.passwordMaster = password;
+    saveLocalDB(data);
+    return true;
+  },
+
+  async getUtente(id) {
+    if (pgClient) {
+      const result = await pgClient.query('SELECT * FROM utenti WHERE id = $1', [id]);
+      return result.rows[0] || null;
+    }
+    return (loadLocalDB().utenti || []).find(u => u.id === id) || null;
+  },
+
+  async aggiornaPasswordUtente(id, passwordHash) {
+    if (pgClient) {
+      const result = await pgClient.query('UPDATE utenti SET password = $1 WHERE id = $2', [passwordHash, id]);
+      return result.rowCount > 0;
+    }
+    const data = loadLocalDB();
+    const utente = (data.utenti || []).find(u => u.id === id);
+    if (!utente) return false;
+    utente.password = passwordHash;
+    saveLocalDB(data);
+    return true;
+  },
+
   // Sessioni di autenticazione
   async creaSessione(sessione) {
     if (pgClient) {
@@ -545,6 +580,14 @@ const db = {
     }
     if (daMigrare.length > 0) saveLocalDB(data);
     return daMigrare.length;
+  },
+
+  // La password master sta in config: le installazioni precedenti la salvavano in chiaro
+  async migraPasswordMasterInChiaro() {
+    const attuale = await this.getPasswordMaster();
+    if (!attuale || isHashed(attuale)) return false;
+    await this.setPasswordMaster(hashPassword(attuale));
+    return true;
   },
 
   // Dashboard stats

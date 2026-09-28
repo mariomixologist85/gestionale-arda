@@ -22,8 +22,8 @@ gestionale-arda/
         ├── App.jsx      # Layout, sidebar, routing
         ├── config.js    # API_BASE_URL (vuoto in produzione → stesse origin)
         ├── utils/       # ricerca.js (confronto testi), apriWhatsApp.js (apertura scheda)
-        └── components/  # Dashboard, Appuntamenti, Clienti, Servizi, Trattamenti,
-                         # Operatori, Login, WhatsApp, SelezioneCliente (ricerca cliente riutilizzata)
+        └── components/  # Dashboard, Appuntamenti, Clienti, Servizi, Trattamenti, Operatori,
+                         # Login, WhatsApp, Impostazioni, SelezioneCliente (ricerca cliente riutilizzata)
 ```
 
 ## Sviluppo locale
@@ -65,6 +65,7 @@ Se `DATABASE_URL` manca o la connessione fallisce, il server ripiega sul JSON lo
 - **Servizi:** catalogo con durata, prezzo, categoria; sconti protetti da password master per il ruolo dipendente
 - **Storico trattamenti:** registro dei trattamenti effettuati per cliente
 - **Login con ruoli:** admin e dipendente
+- **Impostazioni:** cambio della propria password, reset degli account e password master (le ultime due solo admin)
 
 ## WhatsApp
 
@@ -82,8 +83,11 @@ Non esiste un canale di ricezione: il gestionale non legge le risposte da WhatsA
 
 - `POST /api/login` verifica username e password e restituisce un **token di sessione**; il frontend lo salva in `localStorage` e lo invia come `Authorization: Bearer <token>`.
 - Tutte le altre route `/api/*` passano da un middleware che valida il token contro la tabella `sessioni` (in locale `sessioni` dentro `data/db.json`): senza token valido rispondono 401.
-- Le sessioni durano 30 giorni e vengono revocate da `POST /api/logout` o alla scadenza.
-- Le password sono salvate come hash **scrypt** (`scrypt$sale$hash`); all'avvio il server converte automaticamente eventuali password ancora in chiaro.
+- Le sessioni durano 30 giorni e vengono revocate da `POST /api/logout` o alla scadenza. Il cambio password **non** revoca le sessioni già aperte: restano valide fino alla scadenza.
+- Le password sono salvate come hash **scrypt** (`scrypt$sale$hash`); all'avvio il server converte automaticamente eventuali password ancora in chiaro, compresa la password master (`migraPasswordMasterInChiaro`).
+- La pagina **Impostazioni** gestisce le credenziali: `POST /api/password` cambia la propria (serve la password attuale), `GET /api/utenti` e `PUT /api/utenti/:id/password` (solo admin) elencano e reimpostano gli account, `PUT /api/password-master` (solo admin) cambia la password richiesta per gli sconti. Una nuova password deve avere almeno 10 caratteri e non può essere una di quelle predefinite.
+- Gli errori di credenziali rispondono **403**, non 401: l'interceptor axios del frontend chiude la sessione su qualunque 401, quindi un 401 butterebbe fuori l'operatore per un semplice errore di digitazione.
+- Se si entra con una password predefinita, `POST /api/login` risponde con `passwordDaCambiare: true` e il gestionale mostra un avviso in cima a ogni pagina finché la password non viene cambiata.
 - CORS limitato a `http://localhost:3000`, `http://localhost:5173` e agli host extra indicati in `CORS_ORIGINS` (separati da virgola): in produzione il frontend è servito dallo stesso dominio, quindi non serve alcun header CORS.
 
-Gli utenti e la password master di default sono creati dal seed in `database.js`. **Cambiali**: sono comparsi nelle versioni precedenti del repository e devono considerarsi compromessi.
+Gli utenti e la password master di default sono creati dal seed in `database.js`: `admin`/`admin123`, `dipendente`/`dip123` e master `master2026`. **Cambiali dalla pagina Impostazioni**: sono comparsi nelle versioni precedenti del repository e devono considerarsi compromessi.

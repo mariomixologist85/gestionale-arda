@@ -3,7 +3,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const path = require('path');
 const { db, connectPostgreSQL } = require('./database');
-const { verificaPassword, nuovoToken, richiediAuth } = require('./auth');
+const { hashPassword, verificaPassword, nuovoToken, richiediAuth } = require('./auth');
 const whatsapp = require('./whatsapp');
 
 const app = express();
@@ -27,8 +27,34 @@ connectPostgreSQL().then(async () => {
   if (migrate > 0) {
     console.log(`🔐 Migrata/e ${migrate} password in chiaro`);
   }
+  if (await db.migraPasswordMasterInChiaro()) {
+    console.log('🔐 Migrata la password master in chiaro');
+  }
   console.log(' Server pronto');
 });
+
+// Credenziali create dal seed: sono nel repository, quindi da considerarsi compromesse
+const CREDENZIALI_DEFAULT = ['admin123', 'dip123', 'master2026'];
+const LUNGHEZZA_MINIMA_PASSWORD = 10;
+
+function validaNuovaPassword(password) {
+  if (!password || password.length < LUNGHEZZA_MINIMA_PASSWORD) {
+    return `La password deve avere almeno ${LUNGHEZZA_MINIMA_PASSWORD} caratteri`;
+  }
+  if (CREDENZIALI_DEFAULT.includes(password)) {
+    return 'Questa è una password predefinita dell\'installazione: scegline una diversa';
+  }
+  return null;
+}
+
+// Gli errori di credenziali rispondono 403, non 401: il frontend chiude la sessione su qualunque 401
+function soloAdmin(req, res) {
+  if (req.utente.ruolo !== 'admin') {
+    res.status(403).json({ error: 'Operazione riservata all\'amministratore' });
+    return false;
+  }
+  return true;
+}
 
 // ===== AUTH =====
 app.post('/api/login', async (req, res) => {
@@ -54,7 +80,9 @@ app.post('/api/login', async (req, res) => {
     id: utente.id,
     username: utente.username,
     ruolo: utente.ruolo,
-    nome: utente.nome
+    nome: utente.nome,
+    // Segnala al frontend che sta entrando con una password nota dell'installazione
+    passwordDaCambiare: CREDENZIALI_DEFAULT.includes(password || '')
   });
 });
 
@@ -69,11 +97,61 @@ app.post('/api/logout', async (req, res) => {
 app.post('/api/verifica-master', async (req, res) => {
   const { password } = req.body;
   const passwordMaster = await db.getPasswordMaster();
-  if (password === passwordMaster) {
+  if (verificaPassword(password || '', passwordMaster)) {
     res.json({ valido: true });
   } else {
-    res.status(401).json({ valido: false, error: 'Password master non corretta' });
+    res.status(403).json({ valido: false, error: 'Password master non corretta' });
   }
+});
+
+// ===== CREDENZIALI =====
+app.post('/api/password', async (req, res) => {
+  const { passwordAttuale, nuovaPassword } = req.body;
+  const utente = await db.getUtente(req.utente.utenteId);
+  if (!utente) return res.status(404).json({ error: 'Utente non trovato' });
+
+  if (!verificaPassword(passwordAttuale || '', utente.password)) {
+    return res.status(403).json({ error: 'Password attuale non corretta' });
+  }
+  const errore = validaNuovaPassword(nuovaPassword);
+  if (errore) return res.status(400).json({ error: errore });
+  if (verificaPassword(nuovaPassword, utente.password)) {
+    return res.status(400).json({ error: 'La nuova password deve essere diversa da quella attuale' });
+  }
+
+  await db.aggiornaPasswordUtente(utente.id, hashPassword(nuovaPassword));
+  res.json({ success: true });
+});
+
+app.get('/api/utenti', async (req, res) => {
+  if (!soloAdmin(req, res)) return;
+  const utenti = await db.getUtenti();
+  // L'hash della password non esce mai dal server
+  res.json(utenti.map(({ id, username, ruolo, nome }) => ({ id, username, ruolo, nome })));
+});
+
+app.put('/api/utenti/:id/password', async (req, res) => {
+  if (!soloAdmin(req, res)) return;
+  const errore = validaNuovaPassword(req.body.nuovaPassword);
+  if (errore) return res.status(400).json({ error: errore });
+
+  const aggiornato = await db.aggiornaPasswordUtente(req.params.id, hashPassword(req.body.nuovaPassword));
+  if (!aggiornato) return res.status(404).json({ error: 'Utente non trovato' });
+  res.json({ success: true });
+});
+
+app.put('/api/password-master', async (req, res) => {
+  if (!soloAdmin(req, res)) return;
+  const { passwordAttuale, nuovaPassword } = req.body;
+
+  if (!verificaPassword(passwordAttuale || '', await db.getPasswordMaster())) {
+    return res.status(403).json({ error: 'Password master attuale non corretta' });
+  }
+  const errore = validaNuovaPassword(nuovaPassword);
+  if (errore) return res.status(400).json({ error: errore });
+
+  await db.setPasswordMaster(hashPassword(nuovaPassword));
+  res.json({ success: true });
 });
 
 // ===== WHATSAPP =====
