@@ -513,6 +513,52 @@ body {
   font-size: 0.9rem;
 }
 
+/* Ricerca e azioni nelle intestazioni delle liste */
+.azioni-lista {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filtro-lista {
+  width: 320px;
+}
+
+.esito-ricerca {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem;
+}
+
+/* Risposta del cliente al promemoria WhatsApp */
+.risposta-whatsapp {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.risposta-whatsapp-bottoni {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.risposta-whatsapp-bottoni .btn {
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+}
+
+.bottone-annulla-risposta {
+  padding: 0.15rem 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.bottone-annulla-risposta:hover {
+  color: var(--text-primary);
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
@@ -645,6 +691,16 @@ body {
   }
 
   .card-header .btn {
+    width: 100%;
+  }
+
+  .azioni-lista {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filtro-lista {
     width: 100%;
   }
 

@@ -21,7 +21,8 @@ gestionale-arda/
     └── src/
         ├── App.jsx      # Layout, sidebar, routing
         ├── config.js    # API_BASE_URL (vuoto in produzione → stesse origin)
-        └── components/  # Dashboard, Appuntamenti, Clienti, Servizi, Trattamenti, Login, WhatsApp
+        └── components/  # Dashboard, Appuntamenti, Clienti, Servizi, Trattamenti,
+                         # Operatori, Login, WhatsApp, SelezioneCliente (ricerca cliente riutilizzata)
 ```
 
 ## Sviluppo locale
@@ -58,8 +59,8 @@ Se `DATABASE_URL` manca o la connessione fallisce, il server ripiega sul JSON lo
 ## Funzionalità
 
 - **Dashboard:** appuntamenti del giorno e statistiche
-- **Appuntamenti:** calendario con controllo dei conflitti orari per operatore (409 se la fascia si sovrappone)
-- **Clienti:** anagrafica con telefono, email, note e allergie
+- **Appuntamenti:** calendario con controllo dei conflitti orari per operatore (409 se la fascia si sovrappone); il cliente si sceglie con una casella di ricerca (nome, cognome o telefono, anche con accenti e ordine invertito) invece di scorrere l'elenco
+- **Clienti:** anagrafica con telefono, email, note e allergie; la lista è filtrabile con la stessa ricerca
 - **Servizi:** catalogo con durata, prezzo, categoria; sconti protetti da password master per il ruolo dipendente
 - **Storico trattamenti:** registro dei trattamenti effettuati per cliente
 - **Login con ruoli:** admin e dipendente
@@ -70,9 +71,10 @@ L'integrazione è basata su **link `wa.me`**: il gestionale prepara il messaggio
 
 - `GET /api/whatsapp/promemoria/:id` → link con il promemoria dell'appuntamento
 - `GET /api/whatsapp/messaggio?numero=&messaggio=` → link con messaggio libero
-- Dalla pagina **Appuntamenti**, il bottone 📱 apre il promemoria e segna `promemoriaInviato`
+- Dalla pagina **Appuntamenti**, il bottone 📱 apre il promemoria e segna `promemoriaInviato`; la riga passa a **⏳ In attesa** con i bottoni ✅ e ❌
+- La risposta del cliente arriva sul telefono di chi gestisce il centro: un click su ✅ o ❌ la registra sull'appuntamento (`whatsappConferma`, `dataConferma`) e ne allinea lo stato (`confermato`/`annullato`). Il bottone ↺ annulla una risposta registrata per errore
 
-Le risposte dei clienti (SI/NO) vanno riportate manualmente sullo stato dell'appuntamento: non esiste un canale di ricezione. Per l'invio realmente automatico serve un provider ufficiale (es. Twilio/WhatsApp Business API).
+Non esiste un canale di ricezione: il gestionale non legge le risposte da WhatsApp, si limita a registrare quella che l'operatore ha letto sul telefono. `promemoriaInviato` viene segnato all'apertura del link `wa.me`, quindi non garantisce che il messaggio sia stato poi davvero inviato. Per un'automazione completa (il cliente risponde "SI" e l'appuntamento si aggiorna da solo) serve un provider ufficiale — Meta WhatsApp Business API o Twilio — con webhook pubblico e numero di telefono dedicato.
 
 ## Autenticazione
 

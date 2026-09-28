@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 import { Modal, Button, Form } from 'react-bootstrap'
-import { FaPlus, FaEdit, FaTrash, FaUser } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash, FaUser, FaSearch, FaTimes } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
+import { corrisponde, nomeCompleto } from '../utils/ricerca.js'
 
 function Clienti() {
   const [clienti, setClienti] = useState([])
+  const [ricerca, setRicerca] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingCliente, setEditingCliente] = useState(null)
   const [formData, setFormData] = useState({
@@ -30,6 +32,13 @@ function Clienti() {
       console.error('Errore caricamento clienti:', err)
     }
   }
+
+  const clientiFiltrati = useMemo(
+    () => clienti.filter(cliente =>
+      corrisponde([nomeCompleto(cliente), cliente.telefono, cliente.email], ricerca)
+    ),
+    [clienti, ricerca]
+  )
 
   const handleOpenModal = (cliente = null) => {
     if (cliente) {
@@ -95,16 +104,50 @@ function Clienti() {
       <div className="card">
         <div className="card-header">
           <h5 className="card-title">Lista Clienti</h5>
-          <Button variant="primary" onClick={() => handleOpenModal()}>
-            <FaPlus /> Nuovo Cliente
-          </Button>
+          <div className="azioni-lista">
+            <div className="ricerca-cliente-input filtro-lista">
+              <FaSearch className="ricerca-cliente-icon" />
+              <Form.Control
+                type="text"
+                value={ricerca}
+                onChange={(e) => setRicerca(e.target.value)}
+                placeholder="Cerca per nome, cognome, telefono o email..."
+                aria-label="Cerca cliente"
+              />
+              {ricerca && (
+                <button
+                  type="button"
+                  className="ricerca-cliente-clear"
+                  onClick={() => setRicerca('')}
+                  aria-label="Azzera la ricerca"
+                >
+                  <FaTimes />
+                </button>
+              )}
+            </div>
+            <Button variant="primary" onClick={() => handleOpenModal()}>
+              <FaPlus /> Nuovo Cliente
+            </Button>
+          </div>
         </div>
+
+        {ricerca && clienti.length > 0 && (
+          <p className="esito-ricerca">
+            {clientiFiltrati.length === 1 ? '1 cliente trovato' : `${clientiFiltrati.length} clienti trovati`} su {clienti.length}
+          </p>
+        )}
 
         {clienti.length === 0 ? (
           <div className="empty-state">
             <FaUser />
             <h3>Nessun cliente registrato</h3>
             <p>Inizia aggiungendo il tuo primo cliente</p>
+          </div>
+        ) : clientiFiltrati.length === 0 ? (
+          <div className="empty-state">
+            <FaSearch />
+            <h3>Nessun cliente trovato</h3>
+            <p>Nessuna anagrafica corrisponde a "{ricerca}"</p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -119,7 +162,7 @@ function Clienti() {
                 </tr>
               </thead>
               <tbody>
-                {clienti.map(cliente => (
+                {clientiFiltrati.map(cliente => (
                   <tr key={cliente.id}>
                     <td><strong>{cliente.nome}</strong></td>
                     <td>{cliente.cognome}</td>

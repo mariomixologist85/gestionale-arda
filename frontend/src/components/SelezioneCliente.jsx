@@ -1,22 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Form } from 'react-bootstrap'
 import { FaSearch, FaTimes } from 'react-icons/fa'
+import { corrisponde, nomeCompleto, normalizza } from '../utils/ricerca.js'
 
 const MAX_RISULTATI = 50
 
-// Toglie accenti e maiuscole così "nicole" trova anche "Nicolé"
-function normalizza(testo) {
-  return (testo || '')
-    .toString()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-}
-
-function etichetta(cliente) {
-  return `${cliente.nome} ${cliente.cognome}`
-}
+const etichetta = nomeCompleto
 
 function chiaveOrdinamento(cliente) {
   return normalizza(`${cliente.cognome} ${cliente.nome}`)
@@ -56,21 +45,10 @@ function SelezioneCliente({ clienti, value, onSelect, placeholder }) {
   }, [evidenziato])
 
   const risultati = useMemo(() => {
-    const ordinati = [...clienti].sort((a, b) => chiaveOrdinamento(a).localeCompare(chiaveOrdinamento(b), 'it'))
-    const query = normalizza(testo)
-    if (!query) return ordinati
-
-    const termini = query.split(/\s+/).filter(Boolean)
-    const cifre = query.replace(/\D/g, '')
-
-    return ordinati.filter(cliente => {
-      if (cifre.length >= 2 && normalizza(cliente.telefono).replace(/\D/g, '').includes(cifre)) {
-        return true
-      }
-      const nome = chiaveOrdinamento(cliente)
-      const nomeDiretto = normalizza(etichetta(cliente))
-      return termini.every(term => nome.includes(term) || nomeDiretto.includes(term))
-    })
+    const ordinati = [...clienti].sort((a, b) =>
+      chiaveOrdinamento(a).localeCompare(chiaveOrdinamento(b), 'it')
+    )
+    return ordinati.filter(cliente => corrisponde([etichetta(cliente), cliente.telefono], testo))
   }, [clienti, testo])
 
   const visibili = risultati.slice(0, MAX_RISULTATI)

@@ -3,6 +3,7 @@ import axios from 'axios'
 import { Modal, Button, Form } from 'react-bootstrap'
 import { FaPlus, FaTrash, FaClipboardList } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
+import SelezioneCliente from './SelezioneCliente'
 
 function Trattamenti() {
   const [trattamenti, setTrattamenti] = useState([])
@@ -88,20 +89,18 @@ function Trattamenti() {
     setShowModal(false)
   }
 
+  const handleSelectCliente = (cliente) => {
+    setFormData(prev => ({
+      ...prev,
+      clienteId: cliente ? cliente.id : '',
+      clienteNome: cliente ? `${cliente.nome} ${cliente.cognome}` : ''
+    }))
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
 
-    if (name === 'clienteId') {
-      const cliente = clienti.find(c => c.id === value)
-      if (cliente) {
-        setFormData(prev => ({
-          ...prev,
-          clienteId: value,
-          clienteNome: `${cliente.nome} ${cliente.cognome}`
-        }))
-      }
-    }
     if (name === 'servizioId') {
       const servizio = servizi.find(s => s.id === value)
       if (servizio) {
@@ -127,6 +126,10 @@ function Trattamenti() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!formData.clienteId) {
+      alert('Seleziona il cliente cercandolo nell\'elenco')
+      return
+    }
     try {
       await axios.post(`${API_BASE_URL}/api/trattamenti`, formData)
       handleCloseModal()
@@ -157,18 +160,15 @@ function Trattamenti() {
       <div className="card">
         <div className="card-header">
           <h5 className="card-title">Lista Trattamenti</h5>
-          <div>
-            <Form.Select
-              value={filterCliente}
-              onChange={(e) => setFilterCliente(e.target.value)}
-              className="d-inline-block me-2"
-              style={{ width: 'auto' }}
-            >
-              <option value="">Tutti i clienti</option>
-              {clienti.map(c => (
-                <option key={c.id} value={c.id}>{c.nome} {c.cognome}</option>
-              ))}
-            </Form.Select>
+          <div className="azioni-lista">
+            <div className="filtro-lista">
+              <SelezioneCliente
+                clienti={clienti}
+                value={filterCliente}
+                onSelect={(cliente) => setFilterCliente(cliente ? cliente.id : '')}
+                placeholder="Filtra per cliente..."
+              />
+            </div>
             <Button variant="primary" onClick={handleOpenModal}>
               <FaPlus /> Nuovo
             </Button>
@@ -229,17 +229,11 @@ function Trattamenti() {
           <Modal.Body>
             <Form.Group className="mb-3">
               <Form.Label>Cliente *</Form.Label>
-              <Form.Select
-                name="clienteId"
+              <SelezioneCliente
+                clienti={clienti}
                 value={formData.clienteId}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Seleziona cliente...</option>
-                {clienti.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome} {c.cognome}</option>
-                ))}
-              </Form.Select>
+                onSelect={handleSelectCliente}
+              />
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Servizio *</Form.Label>

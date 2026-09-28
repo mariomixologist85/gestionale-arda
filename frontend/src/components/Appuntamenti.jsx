@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Modal, Button, Form } from 'react-bootstrap'
-import { FaPlus, FaEdit, FaTrash, FaCalendarAlt } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaCheck, FaTimes, FaUndo } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
 import SelezioneCliente from './SelezioneCliente'
 
@@ -188,6 +188,37 @@ function Appuntamenti({ utente }) {
     }
   }
 
+  // La risposta del cliente arriva sul telefono dell'operatore: qui viene riportata sul gestionale
+  const handleRegistraRisposta = async (appuntamento, esito) => {
+    const aggiornamento = {
+      whatsappConferma: esito,
+      dataConferma: new Date().toISOString()
+    }
+    if (appuntamento.stato !== 'completato') {
+      aggiornamento.stato = esito === 'confermato' ? 'confermato' : 'annullato'
+    }
+    try {
+      await axios.put(`${API_BASE_URL}/api/appuntamenti/${appuntamento.id}`, aggiornamento)
+      loadAppuntamenti()
+    } catch (err) {
+      console.error('Errore registrazione risposta cliente:', err)
+      alert('Errore nella registrazione della risposta del cliente')
+    }
+  }
+
+  const handleAnnullaRisposta = async (appuntamento) => {
+    try {
+      await axios.put(`${API_BASE_URL}/api/appuntamenti/${appuntamento.id}`, {
+        whatsappConferma: null,
+        dataConferma: null
+      })
+      loadAppuntamenti()
+    } catch (err) {
+      console.error('Errore annullamento risposta cliente:', err)
+      alert('Errore nell\'annullamento della risposta registrata')
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -247,16 +278,47 @@ function Appuntamenti({ utente }) {
                       </span>
                     </td>
                     <td>
-                      {app.whatsappConferma === 'confermato' && (
-                        <span className="badge badge-success">✅ Confermato</span>
-                      )}
-                      {app.whatsappConferma === 'annullato' && (
-                        <span className="badge badge-danger">❌ Annullato</span>
-                      )}
-                      {!app.whatsappConferma && app.promemoriaInviato && (
-                        <span className="badge badge-warning">⏳ In attesa</span>
-                      )}
-                      {!app.promemoriaInviato && (
+                      {app.whatsappConferma ? (
+                        <div className="risposta-whatsapp">
+                          <span className={`badge badge-${app.whatsappConferma === 'confermato' ? 'success' : 'danger'}`}>
+                            {app.whatsappConferma === 'confermato' ? '✅ Confermato' : '❌ Annullato'}
+                          </span>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="bottone-annulla-risposta"
+                            title="Annulla la risposta registrata"
+                            aria-label="Annulla la risposta registrata"
+                            onClick={() => handleAnnullaRisposta(app)}
+                          >
+                            <FaUndo />
+                          </Button>
+                        </div>
+                      ) : app.promemoriaInviato ? (
+                        <div className="risposta-whatsapp">
+                          <span className="badge badge-warning">⏳ In attesa</span>
+                          <div className="risposta-whatsapp-bottoni">
+                            <Button
+                              variant="outline-success"
+                              size="sm"
+                              title="Il cliente ha confermato su WhatsApp"
+                              aria-label="Il cliente ha confermato"
+                              onClick={() => handleRegistraRisposta(app, 'confermato')}
+                            >
+                              <FaCheck />
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              title="Il cliente ha annullato su WhatsApp"
+                              aria-label="Il cliente ha annullato"
+                              onClick={() => handleRegistraRisposta(app, 'annullato')}
+                            >
+                              <FaTimes />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
                         <Button
                           variant="outline-success"
                           size="sm"
