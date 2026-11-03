@@ -1,0 +1,104 @@
+.arda-login {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 54px 40px 25px;
+  background: #f2eee7;
+  color: #352b24;
+  font-family: Arial, sans-serif;
+}
+.arda-login-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 460px) minmax(0, 560px);
+  width: 100%;
+  max-width: 1020px;
+  min-height: 650px;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 28px 90px #49372216, 0 2px 10px #49372208;
+}
+.arda-login-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 42px 30px 40px;
+  text-align: center;
+  background: #2d2420;
+  color: #dac99e;
+}
+.arda-login-brand::before {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  border: 1px solid #b79b5b35;
+  border-radius: 13px;
+  pointer-events: none;
+}
+.arda-login-brand-eyebrow { font-size: 9px; letter-spacing: 3px; color: #b8a98d; margin: 12px 0 0; text-transform: uppercase; }
+.arda-login-logo { width: 320px; max-width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; mix-blend-mode: lighten; margin-top: 8px; }
+.arda-login-brand-line { height: 1px; width: 34px; background: #b79b5b; margin: 2px 0 23px; }
+.arda-login-brand h2 { font: italic 30px/1.3 Georgia, serif; margin: 0; color: #eee3cd; }
+.arda-login-brand-description { font-size: 12px; line-height: 1.9; color: #b8aa98; margin: 15px 0 0; }
+.arda-login-brand-footer { margin: auto 0 0; padding-top: 35px; font-size: 9px; letter-spacing: 2.5px; color: #b8a47d; text-transform: uppercase; }
+.arda-login-panel { background: #fffdf9; padding: 58px 57px 34px; min-width: 0; }
+.arda-login-eyebrow { font-size: 10px; letter-spacing: 2.6px; color: #8f7850; font-weight: bold; text-transform: uppercase; margin: 0; }
+.arda-login-panel h1 { font: 40px/1.2 Georgia, serif; letter-spacing: -1px; margin: 15px 0 12px; color: #352b24; }
+.arda-login-intro { font-size: 13px; line-height: 1.7; color: #786f63; margin: 0 0 31px; }
+.arda-login-label { display: block; font-size: 12px; font-weight: 600; margin: 19px 0 9px; }
+.arda-login-input { width: 100%; height: 50px; border: 1px solid #ded7cc; border-radius: 9px; background: #fff; color: #352b24; font: 13px Arial, sans-serif; padding: 0 15px; }
+.arda-login-input::placeholder { color: #756e65; opacity: 1; }
+.arda-login-input:focus { outline: 2px solid #aa8e55; outline-offset: 2px; }
+.arda-login-password { position: relative; }
+.arda-login-password .arda-login-input { padding-right: 48px; }
+.arda-login-eye { position: absolute; right: 3px; top: 3px; width: 44px; height: 44px; background: none; border: none; color: #887a67; display: grid; place-items: center; border-radius: 6px; }
+.arda-login-eye svg { width: 20px; height: 20px; }
+.arda-login-forgot { text-align: right; margin: 9px 0 19px; }
+.arda-login-forgot button { border: 0; background: none; font-size: 11px; color: #82683c; padding: 4px 0; min-height: 28px; }
+.arda-login-forgot button:hover { text-decoration: underline; }
+.arda-login-submit { width: 100%; min-height: 50px; border: 0; border-radius: 9px; background: #af9156; color: #21190d; display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 13px; font-weight: 600; padding: 12px; transition: background .2s; }
+.arda-login-submit:hover:not(:disabled) { background: #bd9e61; }
+.arda-login-submit svg { width: 18px; height: 18px; }
+.arda-login button { cursor: pointer; }
+.arda-login button:disabled { cursor: wait; opacity: .65; }
+.arda-login a:focus-visible, .arda-login button:focus-visible { outline: 2px solid #8b6c35; outline-offset: 4px; }
+.arda-login-reserved { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 10px; color: #776c5e; margin: 15px 0 0; }
+.arda-login-reserved svg { width: 12px; height: 12px; flex-shrink: 0; }
+.arda-login-divider { display: flex; align-items: center; gap: 13px; color: #86775e; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin: 32px 0 18px; }
+.arda-login-divider::before, .arda-login-divider::after { content: ''; height: 1px; background: #eae3d8; flex: 1; }
+.arda-login-divider span { text-align: center; }
+.arda-login-socials { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.arda-login-socials a { position: relative; border: 1px solid #e9e1d5; border-radius: 9px; min-height: 73px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 7px; padding: 12px 3px; text-decoration: none; color: #826c48; background: #fcf9f3; transition: background .2s, border-color .2s, transform .2s; }
+.arda-login-socials a:hover { color: #685331; background: #f1e8d8; border-color: #b29765; transform: translateY(-2px); }
+.arda-login-socials svg { width: 20px; height: 20px; }
+.arda-login-socials span { font-size: 10px; color: #746957; }
+.arda-login-socials .arda-login-external { position: absolute; right: 8px; top: 7px; width: 11px; height: 11px; color: #9a8055; }
+.arda-login-links-note { font-size: 10px; color: #827360; text-align: center; margin: 27px 0 0; }
+.arda-login-footer { font-size: 10px; letter-spacing: .4px; color: #827668; margin-top: 30px; text-align: center; }
+.arda-login-message { font-size: 13px; line-height: 1.6; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; overflow-wrap: anywhere; }
+.arda-login-message-error { background: #fbede8; color: #823f2c; border: 1px solid #ecd0c4; }
+.arda-login-message-success { background: #eef2e8; color: #485a34; border: 1px solid #d5dfc8; }
+.arda-login-help { font-size: 12px; color: #786f63; line-height: 1.6; margin: 12px 0 23px; }
+.arda-login-back { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; background: none; border: 0; border-radius: 6px; min-height: 44px; width: 100%; font-size: 12px; color: #82683c; }
+@media (max-width: 760px) {
+  .arda-login { padding: 22px 16px; }
+  .arda-login-shell { display: block; max-width: 440px; min-height: 0; border-radius: 18px; }
+  .arda-login-brand { padding: 12px 15px 18px; }
+  .arda-login-brand::before { inset: 9px; border-radius: 10px; }
+  .arda-login-brand-eyebrow, .arda-login-brand-line, .arda-login-brand h2, .arda-login-brand-description, .arda-login-brand-footer { display: none; }
+  .arda-login-logo { width: 168px; margin: 0; }
+  .arda-login-panel { padding: 29px 25px 25px; }
+  .arda-login-panel h1 { font-size: 33px; margin-top: 11px; }
+  .arda-login-intro { font-size: 12px; margin-bottom: 23px; }
+  .arda-login-label { margin-top: 17px; }
+  .arda-login-divider { margin-top: 26px; }
+  .arda-login-links-note { margin-top: 20px; }
+  .arda-login-footer { font-size: 9px; margin-top: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arda-login-submit, .arda-login-socials a { transition: none; }
+  .arda-login-socials a:hover { transform: none; }
+}

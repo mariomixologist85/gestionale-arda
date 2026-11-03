@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import axios from 'axios'
-import { Form, Button, Card, Alert } from 'react-bootstrap'
-import { FaLock, FaUser, FaInstagram, FaWhatsapp, FaStar, FaEnvelope, FaArrowLeft } from 'react-icons/fa'
+import { FiArrowLeft, FiArrowRight, FiArrowUpRight, FiEye, FiEyeOff, FiInstagram, FiLock, FiStar } from 'react-icons/fi'
+import { FaWhatsapp } from 'react-icons/fa'
+import './Login.css'
 import { API_BASE_URL } from '../config.js'
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [mostraPassword, setMostraPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [recupero, setRecupero] = useState(false)
@@ -63,230 +65,66 @@ function Login({ onLogin }) {
     setRecupero(false)
   }
 
-  const stileBottonePrincipale = {
-    width: '100%',
-    padding: '0.75rem',
-    borderRadius: '8px',
-    fontWeight: '600',
-    fontSize: '1rem',
-    background: '#C9A961',
-    border: 'none',
-    color: '#2C1810'
-  }
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #2C1810 0%, #1A0F0A 50%, #2C1810 100%)',
-      padding: '1rem'
-    }}>
-      {/* Colonna sinistra - Social */}
-      <div className="login-social-left">
-        <div className="social-card">
-          <a
-            href="https://www.instagram.com/arda.centroesteticoolistico"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="social-link instagram"
-          >
-            <FaInstagram className="social-icon" />
-            <span className="social-text">@arda.centroesteticoolistico</span>
-          </a>
-        </div>
-      </div>
+    <main className="arda-login">
+      <div className="arda-login-shell">
+        <aside className="arda-login-brand" aria-label="Arda Centro Estetico Olistico">
+          <p className="arda-login-brand-eyebrow">Centro Estetico Olistico</p>
+          <img className="arda-login-logo" src="/logo.jpg" alt="Arda Centro Estetico Olistico" />
+          <span className="arda-login-brand-line" aria-hidden="true" />
+          <h2>La cura, in ogni dettaglio.</h2>
+          <p className="arda-login-brand-description">Uno spazio dedicato al benessere.<br />Anche nel tuo lavoro di ogni giorno.</p>
+          <p className="arda-login-brand-footer">Bellezza · Equilibrio · Armonia</p>
+        </aside>
 
-      {/* Form Login Centrale */}
-      <Card style={{
-        width: '100%',
-        maxWidth: '420px',
-        borderRadius: '16px',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
-        border: '1px solid rgba(201, 169, 97, 0.2)'
-      }}>
-        <Card.Body style={{ padding: '2.5rem' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img
-              src="/logo.jpg"
-              alt="Arda Logo"
-              style={{
-                width: '120px',
-                height: '120px',
-                objectFit: 'contain',
-                marginBottom: '1rem'
-              }}
-            />
-            <h2 style={{ fontWeight: '700', marginBottom: '0.5rem', color: '#2C1810', letterSpacing: '2px' }}>ARDA</h2>
-            <p style={{ color: '#6B5B4F', fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Centro Estetico Olistico</p>
-          </div>
+        <section className="arda-login-panel" aria-labelledby="arda-login-title">
+          <p className="arda-login-eyebrow">Il tuo spazio Arda</p>
+          <h1 id="arda-login-title">{recupero ? 'Ritrova il tuo accesso.' : 'Bentornata, bentornato.'}</h1>
+          <p className="arda-login-intro">
+            {recupero ? 'Ti invieremo un collegamento per scegliere una nuova password.' : <>Accedi al gestionale e prenditi cura<br />della tua giornata.</>}
+          </p>
 
-          {error && (
-            <Alert variant="danger" style={{ borderRadius: '8px' }}>
-              {error}
-            </Alert>
-          )}
+          {error && <div className="arda-login-message arda-login-message-error" role="alert">{error}</div>}
 
           {recupero ? (
-            <>
+            <form key="recupero" onSubmit={handleRecupero} aria-label="Recupero password" aria-busy={loading}>
               {esitoRecupero && (
-                <Alert variant={esitoRecupero.tipo} style={{ borderRadius: '8px' }}>
+                <div className={`arda-login-message ${esitoRecupero.tipo === 'success' ? 'arda-login-message-success' : 'arda-login-message-error'}`} role={esitoRecupero.tipo === 'success' ? 'status' : 'alert'}>
                   {esitoRecupero.testo}
-                </Alert>
-              )}
-              <Form onSubmit={handleRecupero}>
-                <Form.Group className="mb-4">
-                  <Form.Label style={{ fontWeight: '500' }}>
-                    <FaEnvelope className="me-2" />
-                    Username o email dell'account
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={identificativo}
-                    onChange={(e) => setIdentificativo(e.target.value)}
-                    placeholder="admin oppure nome@esempio.it"
-                    required
-                    style={{ borderRadius: '8px', padding: '0.75rem' }}
-                  />
-                  <Form.Text className="text-muted">
-                    Il collegamento arriva all'email associata all'account, vale 30 minuti e si usa una volta sola.
-                  </Form.Text>
-                </Form.Group>
-
-                <Button variant="primary" type="submit" disabled={loading} style={stileBottonePrincipale}>
-                  {loading ? 'Invio in corso...' : 'Invia il collegamento'}
-                </Button>
-                <Button variant="link" type="button" className="w-100 mt-2" onClick={chiudiRecupero}>
-                  <FaArrowLeft className="me-2" />Torna al login
-                </Button>
-              </Form>
-            </>
-          ) : (
-            <>
-              <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-3">
-                  <Form.Label style={{ fontWeight: '500' }}>
-                    <FaUser className="me-2" />
-                    Username
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Inserisci username"
-                    required
-                    style={{ borderRadius: '8px', padding: '0.75rem' }}
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label style={{ fontWeight: '500' }}>
-                    <FaLock className="me-2" />
-                    Password
-                  </Form.Label>
-                  <Form.Control
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Inserisci password"
-                    required
-                    style={{ borderRadius: '8px', padding: '0.75rem' }}
-                  />
-                </Form.Group>
-
-                <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
-                  <button type="button" className="link-credenziali" onClick={apriRecupero}>
-                    Password dimenticata?
-                  </button>
                 </div>
-
-                <Button variant="primary" type="submit" disabled={loading} style={stileBottonePrincipale}>
-                  {loading ? 'Accesso in corso...' : 'Accedi'}
-                </Button>
-              </Form>
-            </>
+              )}
+              <label className="arda-login-label" htmlFor="arda-recupero">Username o email dell’account</label>
+              <input id="arda-recupero" className="arda-login-input" type="text" value={identificativo} onChange={e => setIdentificativo(e.target.value)} placeholder="Inserisci username o email" autoComplete="username" required disabled={loading} aria-describedby="arda-recupero-help" />
+              <p id="arda-recupero-help" className="arda-login-help">Il collegamento arriva all’email associata all’account, vale 30 minuti e si usa una volta sola.</p>
+              <button className="arda-login-submit" type="submit" disabled={loading}>{loading ? 'Invio in corso…' : 'Invia il collegamento'}<FiArrowRight aria-hidden="true" /></button>
+              <button className="arda-login-back" type="button" onClick={chiudiRecupero} disabled={loading}><FiArrowLeft aria-hidden="true" />Torna al login</button>
+            </form>
+          ) : (
+            <form key="login" onSubmit={handleSubmit} aria-label="Accesso al gestionale" aria-busy={loading}>
+              <label className="arda-login-label" htmlFor="arda-username">Username</label>
+              <input id="arda-username" className="arda-login-input" type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Inserisci il tuo username" autoComplete="username" required disabled={loading} autoCapitalize="none" spellCheck={false} />
+              <label className="arda-login-label" htmlFor="arda-password">Password</label>
+              <div className="arda-login-password">
+                <input id="arda-password" className="arda-login-input" type={mostraPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Inserisci la tua password" autoComplete="current-password" required disabled={loading} />
+                <button className="arda-login-eye" type="button" onClick={() => setMostraPassword(!mostraPassword)} aria-label={mostraPassword ? 'Nascondi password' : 'Mostra password'} aria-pressed={mostraPassword} aria-controls="arda-password">{mostraPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}</button>
+              </div>
+              <div className="arda-login-forgot"><button type="button" onClick={apriRecupero} disabled={loading}>Password dimenticata?</button></div>
+              <button className="arda-login-submit" type="submit" disabled={loading}>{loading ? 'Accesso in corso…' : 'Accedi al gestionale'}<FiArrowRight aria-hidden="true" /></button>
+              <p className="arda-login-reserved"><FiLock aria-hidden="true" />Accesso riservato al personale Arda</p>
+            </form>
           )}
 
-          <div style={{
-            marginTop: '2rem',
-            padding: '1rem',
-            background: '#F9F5F0',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            color: '#6B5B4F',
-            border: '1px solid #E8D5B7',
-            textAlign: 'center'
-          }}>
-            <strong style={{ color: '#2C1810' }}>Arda - Centro Estetico Olistico</strong><br />
-            <span style={{ fontSize: '0.8rem' }}>Gestionale riservato al personale autorizzato</span>
-          </div>
-
-          {/* Social links per mobile */}
-          <div className="login-mobile-social">
-            <div className="social-card">
-              <a
-                href="https://www.instagram.com/arda.centroesteticoolistico"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link instagram"
-              >
-                <FaInstagram className="social-icon" />
-                <span className="social-text">Seguici su Instagram</span>
-              </a>
-            </div>
-            <div className="social-card">
-              <a
-                href="https://wa.me/393391853082"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link whatsapp"
-              >
-                <FaWhatsapp className="social-icon" />
-                <span className="social-text">Contattaci su WhatsApp</span>
-              </a>
-            </div>
-            <div className="social-card">
-              <a
-                href="https://www.google.com/maps/search/?api=1&query=Arda+Centro+Estetico+Olistico"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link review"
-              >
-                <FaStar className="social-icon" />
-                <span className="social-text">Lascia una recensione</span>
-              </a>
-            </div>
-          </div>
-        </Card.Body>
-      </Card>
-
-      {/* Colonna destra - Contatti e Recensioni */}
-      <div className="login-social-right">
-        <div className="social-card">
-          <a
-            href="https://wa.me/393391853082"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="social-link whatsapp"
-          >
-            <FaWhatsapp className="social-icon" />
-            <span className="social-text">Contattaci su WhatsApp</span>
-          </a>
-        </div>
-        <div className="social-card">
-          <a
-            href="https://www.google.com/maps/search/?api=1&query=Arda+Centro+Estetico+Olistico"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="social-link review"
-          >
-            <FaStar className="social-icon" />
-            <span className="social-text">Lascia una recensione</span>
-          </a>
-        </div>
+          <div className="arda-login-divider"><span>Restiamo in contatto</span></div>
+          <nav className="arda-login-socials" aria-label="Social e contatti Arda">
+            <a href="https://www.instagram.com/arda.centroesteticoolistico" target="_blank" rel="noopener noreferrer" aria-label="Instagram Arda, si apre in una nuova scheda"><FiInstagram aria-hidden="true" /><span>Instagram</span><FiArrowUpRight className="arda-login-external" aria-hidden="true" /></a>
+            <a href="https://wa.me/393391853082" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp Arda, si apre in una nuova scheda"><FaWhatsapp aria-hidden="true" /><span>WhatsApp</span><FiArrowUpRight className="arda-login-external" aria-hidden="true" /></a>
+            <a href="https://www.google.com/maps/search/?api=1&query=Arda+Centro+Estetico+Olistico" target="_blank" rel="noopener noreferrer" aria-label="Recensioni Arda su Google Maps, si apre in una nuova scheda"><FiStar aria-hidden="true" /><span>Recensioni</span><FiArrowUpRight className="arda-login-external" aria-hidden="true" /></a>
+          </nav>
+          <p className="arda-login-links-note">I collegamenti si aprono in una nuova scheda.</p>
+        </section>
       </div>
-    </div>
+      <footer className="arda-login-footer">© Arda · Centro Estetico Olistico</footer>
+    </main>
   )
 }
 
