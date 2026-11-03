@@ -337,6 +337,10 @@ const db = {
         conditions.push(`"operatoreId" = $${conditions.length + 1}`);
         values.push(filter.operatoreId);
       }
+      if (filter.clienteId) {
+        conditions.push(`"clienteId" = $${conditions.length + 1}`);
+        values.push(filter.clienteId);
+      }
       
       if (conditions.length > 0) {
         query += ' WHERE ' + conditions.join(' AND ');
@@ -351,6 +355,7 @@ const db = {
     let results = loadLocalDB().appuntamenti;
     if (filter.data) results = results.filter(a => a.data === filter.data);
     if (filter.operatoreId) results = results.filter(a => a.operatoreId === filter.operatoreId);
+    if (filter.clienteId) results = results.filter(a => a.clienteId === filter.clienteId);
     return results;
   },
 

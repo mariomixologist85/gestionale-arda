@@ -2,15 +2,18 @@ import React, { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Modal, Button, Form } from 'react-bootstrap'
-import { FaPlus, FaEdit, FaTrash, FaUser, FaSearch, FaTimes } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaTrash, FaUser, FaSearch, FaTimes, FaEye } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
 import { corrisponde, nomeCompleto } from '../utils/ricerca.js'
+import SchedaCliente from './SchedaCliente'
 
 function Clienti() {
   const { search } = useLocation()
   const navigate = useNavigate()
   const [clienti, setClienti] = useState([])
   const [ricerca, setRicerca] = useState('')
+  const [clienteApertoId, setClienteApertoId] = useState(null)
+  const clienteAperto = clienti.find(cliente => cliente.id === clienteApertoId)
   const [showModal, setShowModal] = useState(false)
   const [editingCliente, setEditingCliente] = useState(null)
   const [formData, setFormData] = useState({
@@ -109,7 +112,7 @@ function Clienti() {
     <div>
       <div className="page-header">
         <h1>Anagrafica Clienti</h1>
-        <p>Gestisci le schede dei tuoi clienti</p>
+        <p>Cerca un cliente e clicca sul suo nome per consultare contatti, appuntamenti e trattamenti.</p>
       </div>
 
       <div className="card">
@@ -174,24 +177,27 @@ function Clienti() {
               </thead>
               <tbody>
                 {clientiFiltrati.map(cliente => (
-                  <tr key={cliente.id}>
-                    <td><strong>{cliente.nome}</strong></td>
+                  <tr key={cliente.id} className="customer-list-row" onClick={() => setClienteApertoId(cliente.id)}>
+                    <td><button type="button" className="customer-name-button" onClick={e => { e.stopPropagation(); setClienteApertoId(cliente.id) }} aria-label={`Apri scheda di ${nomeCompleto(cliente)}`}>{cliente.nome}</button></td>
                     <td>{cliente.cognome}</td>
                     <td>{cliente.telefono || '-'}</td>
                     <td>{cliente.email || '-'}</td>
                     <td>
+                      <Button variant="outline-primary" size="sm" className="me-2" aria-label={`Visualizza scheda di ${nomeCompleto(cliente)}`} title="Visualizza scheda cliente" onClick={e => { e.stopPropagation(); setClienteApertoId(cliente.id) }}><FaEye /></Button>
                       <Button
                         variant="outline-primary"
                         size="sm"
                         className="me-2"
-                        onClick={() => handleOpenModal(cliente)}
+                        aria-label={`Modifica ${nomeCompleto(cliente)}`}
+                        onClick={e => { e.stopPropagation(); handleOpenModal(cliente) }}
                       >
                         <FaEdit />
                       </Button>
                       <Button
                         variant="outline-danger"
                         size="sm"
-                        onClick={() => handleDelete(cliente.id)}
+                        aria-label={`Elimina ${nomeCompleto(cliente)}`}
+                        onClick={e => { e.stopPropagation(); handleDelete(cliente.id) }}
                       >
                         <FaTrash />
                       </Button>
@@ -203,6 +209,8 @@ function Clienti() {
           </div>
         )}
       </div>
+
+      {clienteAperto && <SchedaCliente key={clienteAperto.id} cliente={clienteAperto} onHide={() => setClienteApertoId(null)} onModifica={() => { setClienteApertoId(null); handleOpenModal(clienteAperto) }} />}
 
       <Modal show={showModal} onHide={handleCloseModal}>
         <Modal.Header closeButton>

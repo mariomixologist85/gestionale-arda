@@ -509,10 +509,11 @@ app.delete('/api/servizi/:id', async (req, res) => {
 
 // ===== APPUNTAMENTI =====
 app.get('/api/appuntamenti', async (req, res) => {
-  const { data, operatore } = req.query;
+  const { data, operatore, clienteId } = req.query;
   const filter = {};
   if (data) filter.data = data;
   if (operatore) filter.operatoreId = operatore;
+  if (clienteId) filter.clienteId = clienteId;
   const appuntamenti = await db.getAppuntamenti(filter);
   res.json(appuntamenti);
 });
