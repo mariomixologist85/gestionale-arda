@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Modal, Button, Form } from 'react-bootstrap'
 import { FaPlus, FaEdit, FaTrash, FaUser, FaSearch, FaTimes } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
 import { corrisponde, nomeCompleto } from '../utils/ricerca.js'
 
 function Clienti() {
+  const { search } = useLocation()
+  const navigate = useNavigate()
   const [clienti, setClienti] = useState([])
   const [ricerca, setRicerca] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -23,6 +26,14 @@ function Clienti() {
   useEffect(() => {
     loadClienti()
   }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(search)
+    if (params.get('nuovo') !== '1') return
+    handleOpenModal()
+    params.delete('nuovo')
+    navigate({ pathname: '/clienti', search: params.toString() ? `?${params}` : '' }, { replace: true })
+  }, [search, navigate])
 
   const loadClienti = async () => {
     try {

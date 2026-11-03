@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { dataCentro, dataValida } from '../utils/giornata.js'
 import { Modal, Button, Form } from 'react-bootstrap'
 import { FaPlus, FaEdit, FaTrash, FaCalendarAlt, FaCheck, FaTimes, FaUndo } from 'react-icons/fa'
 import { API_BASE_URL } from '../config.js'
@@ -7,13 +9,19 @@ import { apriWhatsApp } from '../utils/apriWhatsApp.js'
 import SelezioneCliente from './SelezioneCliente'
 
 function Appuntamenti({ utente }) {
+  const { search } = useLocation()
+  const navigate = useNavigate()
+  const [dataCaricata, setDataCaricata] = useState(null)
   const [appuntamenti, setAppuntamenti] = useState([])
   const [clienti, setClienti] = useState([])
   const [servizi, setServizi] = useState([])
   const [operatori, setOperatori] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [editingApp, setEditingApp] = useState(null)
-  const [filterData, setFilterData] = useState(new Date().toISOString().split('T')[0])
+  const [filterData, setFilterData] = useState(() => {
+    const data = new URLSearchParams(search).get('data')
+    return dataValida(data) ? data : dataCentro()
+  })
   const [formData, setFormData] = useState({
     clienteId: '',
     clienteNome: '',
@@ -21,7 +29,7 @@ function Appuntamenti({ utente }) {
     servizioNome: '',
     operatoreId: '',
     operatoreNome: '',
-    data: new Date().toISOString().split('T')[0],
+    data: dataCentro(),
     ora: '09:00',
     durata: 60,
     note: '',
@@ -35,10 +43,29 @@ function Appuntamenti({ utente }) {
     loadOperatori()
   }, [filterData])
 
+  // I collegamenti dalla dashboard aprono soltanto il modulo: nessun salvataggio automatico.
+  useEffect(() => {
+    const params = new URLSearchParams(search)
+    const dataRichiesta = params.get('data')
+    if (dataValida(dataRichiesta) && dataRichiesta !== filterData) {
+      setFilterData(dataRichiesta)
+      return
+    }
+    if (dataCaricata !== filterData) return
+    if (params.get('nuovo') === '1') {
+      handleOpenModal()
+    } else if (params.get('apri')) {
+      const trovato = appuntamenti.find(app => app.id === params.get('apri'))
+      if (trovato) handleOpenModal(trovato)
+    } else return
+    navigate({ pathname: '/appuntamenti', search: `?${new URLSearchParams({ data: filterData })}` }, { replace: true })
+  }, [search, filterData, dataCaricata, appuntamenti, navigate])
+
   const loadAppuntamenti = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/appuntamenti?data=${filterData}`)
       setAppuntamenti(res.data)
+      setDataCaricata(filterData)
     } catch (err) {
       console.error('Errore caricamento appuntamenti:', err)
     }
@@ -238,7 +265,7 @@ function Appuntamenti({ utente }) {
             <Form.Control
               type="date"
               value={filterData}
-              onChange={(e) => setFilterData(e.target.value)}
+              onChange={(e) => { if (dataValida(e.target.value)) { setFilterData(e.target.value); navigate({ pathname: '/appuntamenti', search: `?${new URLSearchParams({ data: e.target.value })}` }, { replace: true }) } }}
               className="d-inline-block me-2"
               style={{ width: 'auto' }}
             />
