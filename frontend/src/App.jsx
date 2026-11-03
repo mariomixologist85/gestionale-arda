@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Routes, Route, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import axios from 'axios'
-import { FiGrid, FiCalendar, FiUsers, FiSun, FiLogOut, FiMessageCircle, FiMenu, FiX, FiUser, FiSettings, FiClock } from 'react-icons/fi'
+import { FiGrid, FiCalendar, FiUsers, FiSun, FiLogOut, FiMessageCircle, FiMenu, FiX, FiUser, FiSettings, FiClock, FiBarChart2 } from 'react-icons/fi'
 import { Alert } from 'react-bootstrap'
 import { API_BASE_URL } from './config.js'
 import { dataCentro, formattaData } from './utils/giornata.js'
@@ -9,6 +9,7 @@ import './workspace.css'
 import Login from './components/Login'
 import ReimpostaPassword from './components/ReimpostaPassword'
 import Dashboard from './components/Dashboard'
+import Resoconto from './components/Resoconto'
 import Appuntamenti from './components/Appuntamenti'
 import Clienti from './components/Clienti'
 import Servizi from './components/Servizi'
@@ -124,7 +125,7 @@ function App() {
               ['/', 'La tua giornata', FiGrid], ['/appuntamenti', 'Appuntamenti', FiCalendar],
               ['/clienti', 'Clienti', FiUsers], ['/servizi', 'Servizi', FiSun],
               ['/operatori', 'Operatori', FiUser], ['/trattamenti', 'Storico trattamenti', FiClock],
-              ['/whatsapp', 'WhatsApp', FiMessageCircle]
+              ['/resoconto', 'Resoconto', FiBarChart2], ['/whatsapp', 'WhatsApp', FiMessageCircle]
             ].map(([url, nome, Icona]) => <li className="nav-item" key={url}><NavLink to={url} end={url === '/'} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={closeSidebar}><Icona aria-hidden="true" /><span>{nome}</span></NavLink></li>)}
           </ul>
         </nav>
@@ -150,6 +151,7 @@ function App() {
           <Route path="/servizi" element={<Servizi utente={utente} />} />
           <Route path="/operatori" element={<Operatori />} />
           <Route path="/trattamenti" element={<Trattamenti utente={utente} />} />
+          <Route path="/resoconto" element={<Resoconto />} />
           <Route path="/whatsapp" element={<WhatsApp />} />
           <Route path="/impostazioni" element={<Impostazioni utente={utente} onUtenteAggiornato={aggiornaUtenteLocale} />} />
         </Routes>
